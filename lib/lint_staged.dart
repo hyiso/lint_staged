@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:lint_staged/src/git_workflow.dart';
 import 'package:lint_staged/src/logger.dart';
 import 'package:yaml/yaml.dart';
 
@@ -12,6 +13,9 @@ Future<bool> lintStaged({
   bool stash = true,
   String? workingDirectory,
 }) async {
+  final partiallyStagedFiles = await GitWorkflow().getPartiallyStagedFiles();
+  print(partiallyStagedFiles);
+  return true;
   final files = await getStagedFiles(
     diff: diff,
     diffFilter: diffFilter,

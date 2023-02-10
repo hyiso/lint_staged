@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'logger.dart';
 import 'package:path/path.dart';
 
 ///
@@ -42,10 +41,9 @@ Future<String> execGit(
   List<String> args, {
   String? workingDirectory,
 }) async {
-  logger.stderr('Running `git ${args.join(' ')}`');
   final result = await Process.run('git', [...kNoSubmoduleRecurse, ...args],
       workingDirectory: workingDirectory);
-  return (result.stdout as String).trim();
+  return result.stdout as String;
 }
 
 ///
