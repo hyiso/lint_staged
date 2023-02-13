@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
-
-import 'package:lint_staged/src/file.dart';
-import 'package:lint_staged/src/git.dart';
-import 'package:lint_staged/src/logger.dart';
+import 'package:lint_staged/src/symbols.dart';
 import 'package:path/path.dart';
+
+import 'file.dart';
+import 'git.dart';
+import 'logger.dart';
+import 'state.dart';
 
 /// In git status machine output, renames are presented as `to`NUL`from`
 /// When diffing, both need to be taken into account, but in some cases on the `to`.
@@ -99,13 +101,15 @@ class GitWorkflow {
   ///
   /// Get name of backup stash
   ///
-  Future<String> getBackupStash() async {
+  Future<String> getBackupStash(LintState ctx) async {
     final stashes = await execGit(['stash', 'list']);
     final index =
         stashes.split('\n').indexWhere((line) => line.contains(kStash));
     if (index == -1) {
+      ctx.errors.add(kGetBackupStashError);
       throw Exception('lint-staged automatic backup is missing!');
     }
+
     /// https://github.com/okonet/lint-staged/issues/1121
     /// Detect MSYS in login shell mode and escape braces
     /// to prevent interpolation
@@ -145,7 +149,7 @@ class GitWorkflow {
   ///
   /// Restore meta information about ongoing git merge
   ///
-  Future<void> restoreMergeStatus() async {
+  Future<void> restoreMergeStatus(LintState ctx) async {
     logger.trace('Restoring merge state...');
     try {
       await Future.wait([
@@ -160,6 +164,7 @@ class GitWorkflow {
     } catch (e) {
       logger.trace('Failed restoring merge state with error:');
       logger.trace(e.toString());
+      handleError(e, ctx, kRestoreMergeStatusError);
     }
   }
 
@@ -208,13 +213,12 @@ class GitWorkflow {
   ///
   /// Create a diff of partially staged files and backup stash if enabled.
   ///
-  Future<bool> prepare({bool shouldBackup = true}) async {
-    bool hasPartiallyStagedFiles = false;
+  Future<void> prepare(LintState ctx) async {
     try {
       logger.trace('Backing up original state...');
       partiallyStagedFiles = await getPartiallyStagedFiles();
       if (partiallyStagedFiles.isNotEmpty) {
-        hasPartiallyStagedFiles = true;
+        ctx.hasPartiallyStagedFiles = true;
         final unstagedPatch = getHiddenFilepath(kPatchUnstaged);
         final files = processRenames(partiallyStagedFiles);
         await execGit([
@@ -226,12 +230,12 @@ class GitWorkflow {
           ...files
         ]);
       } else {
-        hasPartiallyStagedFiles = false;
+        ctx.hasPartiallyStagedFiles = false;
       }
 
       ///  If backup stash should be skipped, no need to continue
-      if (!shouldBackup) {
-        return hasPartiallyStagedFiles;
+      if (!ctx.shouldBackup) {
+        return;
       }
 
       /// When backup is enabled, the revert will clear ongoing merge status.
@@ -250,20 +254,23 @@ class GitWorkflow {
 
       logger.trace('Done backing up original state!');
     } catch (e) {
-      handleError(e);
+      handleError(e, ctx);
     }
-    return hasPartiallyStagedFiles;
   }
 
   ///
   /// Remove unstaged changes to all partially staged files, to avoid tasks from seeing them
   ///
-  Future<void> hideUnstagedChanges() async {
+  Future<void> hideUnstagedChanges(LintState ctx) async {
     try {
       final files = processRenames(partiallyStagedFiles, false);
       await execGit(['checkout', '--force', '--', ...files]);
     } catch (e) {
-      handleError(e);
+      ///
+      ///`git checkout --force` doesn't throw errors, so it shouldn't be possible to get here.
+      // If this does fail, the handleError method will set ctx.gitError and lint-staged will fail.
+      ///
+      handleError(e, ctx, kHideUnstagedChangesError);
     }
   }
 
@@ -271,7 +278,9 @@ class GitWorkflow {
   /// Applies back task modifications, and unstaged changes hidden in the stash.
   /// In case of a merge-conflict retry with 3-way merge.
   ///
-  Future<void> applyModifications() async {
+  Future<void> applyModifications(LintState ctx) async {
+    logger.trace('Adding task modifications to index...');
+
     /// `matchedFileChunks` includes staged files that lint-staged originally detected and matched against a task.
     /// Add only these files so any 3rd-party edits to other files won't be included in the commit.
     /// These additions per chunk are run "serially" to prevent race conditions.
@@ -279,11 +288,13 @@ class GitWorkflow {
     for (var files in matchedFileChunks) {
       await execGit(['add', '--', ...files]);
     }
+    logger.trace('Done adding task modifications to index!');
 
     final stagedFilesAfterAdd =
         await execGit(getDiffArgs(diff: diff, diffFilter: diffFilter));
     if (stagedFilesAfterAdd.isEmpty && !allowEmpty) {
-      handleError(Exception('Prevented an empty git commit!'));
+      handleError(Exception('Prevented an empty git commit!'), ctx,
+          kApplyEmptyCommitError);
     }
   }
 
@@ -292,7 +303,7 @@ class GitWorkflow {
   /// this is probably because of conflicts between new task modifications.
   /// 3-way merge usually fixes this, and in case it doesn't we should just give up and throw.
   ///
-  Future<void> resotreUnstagedChanges() async {
+  Future<void> resotreUnstagedChanges(LintState ctx) async {
     logger.trace('Restoring unstaged changes...');
     final unstagedPatch = getHiddenFilepath(kPatchUnstaged);
     try {
@@ -308,8 +319,11 @@ class GitWorkflow {
         logger
             .trace('Error while restoring unstaged changes using 3-way merge:');
         logger.trace(threeWayApplyError.toString());
-        handleError(Exception(
-            'Unstaged changes could not be restored due to a merge conflict!'));
+        handleError(
+            Exception(
+                'Unstaged changes could not be restored due to a merge conflict!'),
+            ctx,
+            kRestoreUnstagedChangesError);
       }
     }
   }
@@ -317,15 +331,15 @@ class GitWorkflow {
   ///
   /// Restore original HEAD state in case of errors
   ///
-  Future<void> restoreOriginState() async {
+  Future<void> restoreOriginState(LintState ctx) async {
     try {
       logger.trace('Restoring original state...');
       await execGit(['reset', '--hard', 'HEAD']);
       await execGit(
-          ['stash', 'apply', '--quiet', '--index', await getBackupStash()]);
+          ['stash', 'apply', '--quiet', '--index', await getBackupStash(ctx)]);
 
       /// Restore meta information about ongoing git merge
-      await restoreMergeStatus();
+      await restoreMergeStatus(ctx);
 
       /// If stashing resurrected deleted files, clean them out
       await Future.wait(deletedFiles.map((file) => unlink(file)));
@@ -335,24 +349,28 @@ class GitWorkflow {
 
       logger.trace('Done restoring original state!');
     } catch (error) {
-      handleError(error);
+      handleError(error, ctx, kRestoreOriginalStateError);
     }
   }
 
   ///
   /// Drop the created stashes after everything has run
   ///
-  Future<void> cleanup() async {
+  Future<void> cleanup(LintState ctx) async {
     try {
       logger.trace('Dropping backup stash...');
-      await execGit(['stash', 'drop', '--quiet', await getBackupStash()]);
+      await execGit(['stash', 'drop', '--quiet', await getBackupStash(ctx)]);
       logger.trace('Done dropping backup stash!');
     } catch (error) {
-      handleError(error);
+      handleError(error, ctx);
     }
   }
 
-  void handleError(e) {
-    throw e;
+  void handleError(e, LintState ctx, [Symbol? symbol]) {
+    ctx.errors.add(kGitError);
+    if (symbol != null) {
+      ctx.errors.add(symbol);
+    }
+    // throw e;
   }
 }
