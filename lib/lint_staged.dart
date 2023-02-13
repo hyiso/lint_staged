@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:lint_staged/src/chunk.dart';
 import 'package:lint_staged/src/git_workflow.dart';
 import 'package:lint_staged/src/logger.dart';
 import 'package:yaml/yaml.dart';
@@ -13,9 +14,6 @@ Future<bool> lintStaged({
   bool stash = true,
   String? workingDirectory,
 }) async {
-  final partiallyStagedFiles = await GitWorkflow().getPartiallyStagedFiles();
-  print(partiallyStagedFiles);
-  return true;
   final files = await getStagedFiles(
     diff: diff,
     diffFilter: diffFilter,
@@ -28,6 +26,10 @@ Future<bool> lintStaged({
   if (files.isEmpty) {
     logger.stdout('No staged files');
     return true;
+  }
+  final stagedFileChunks = chunkFiles(files: files);
+  if (stagedFileChunks.length > 1) {
+    logger.stdout('Chunked staged files into ${stagedFileChunks.length} part');
   }
 
   final yaml = await loadYaml(File('pubspec.yaml').readAsStringSync());
@@ -46,13 +48,41 @@ Future<bool> lintStaged({
         runCommands(commands, file, workingDirectory: workingDirectory);
   }
 
-  final dartFiles = files.where((file) => file.endsWith('.dart'));
+  final matchedFiles = files.where((file) => file.endsWith('.dart')).toList();
+  final matchedFileChunks = chunkFiles(files: matchedFiles);
+  final git = GitWorkflow(
+    allowEmpty: allowEmpty,
+    gitConfigDir: await getGitConfigDir(),
+    diff: diff,
+    diffFilter: diffFilter,
+    matchedFileChunks: matchedFileChunks,
+  );
+  logger.stdout('Preparing lint_staged...');
+  final hasPartiallyStagedFiles = await git.prepare();
+  if (hasPartiallyStagedFiles) {
+    logger.stdout('Hiding unstaged changes to partially staged files...');
+    await git.hideUnstagedChanges();
+  }
+  logger.stdout('Running tasks for staged files...');
   final tasks = <Future<ProcessResult?>>[];
-  for (var file in dartFiles) {
+  for (var file in matchedFiles) {
     tasks.add(dartCommands(file));
   }
   final results = (await Future.wait(tasks));
-  return results.every((result) => result == null || result.exitCode == 0);
+  if (!results.every((result) => result == null || result.exitCode == 0)) {
+    return false;
+  }
+  logger.stdout('Applying modifications from tasks...');
+  await git.applyModifications();
+  if (hasPartiallyStagedFiles) {
+    logger.stdout('Restoring unstaged changes to partially staged files...');
+    await git.resotreUnstagedChanges();
+  }
+  // logger.stdout('Reverting to original state because of errors...');
+  // await git.restoreOriginState();
+  // logger.stdout('Cleaning up temporary files...');
+  // await git.cleanup();
+  return true;
 }
 
 Future<ProcessResult?> runCommands(
@@ -62,7 +92,7 @@ Future<ProcessResult?> runCommands(
 }) async {
   ProcessResult? result;
   for (var command in commands) {
-    logger.stderr('${command.join(' ')} $file');
+    logger.stdout('${command.join(' ')} $file');
     final res = await Process.run(command.removeAt(0), [...command, file],
         workingDirectory: workingDirectory);
     result = res + result;
@@ -76,6 +106,6 @@ extension _ProcessResult on ProcessResult {
       return this;
     }
     return ProcessResult(0, exitCode + other.exitCode,
-        '$stdout\n${other.stdout}', '$stderr\n${other.stderr}');
+        '$stdout\n${other.stdout}', '$stdout\n${other.stdout}');
   }
 }

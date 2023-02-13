@@ -55,12 +55,17 @@ List<String> parseGitZOutput(String input) {
   return input.isEmpty ? [] : input.replaceAll(r'\u0000$', '').split('\u0000');
 }
 
-Future<Iterable<String>?> getStagedFiles({
+Future<List<String>?> getStagedFiles({
   List<String> diff = const [],
   String? diffFilter,
   String? workingDirectory,
 }) async {
   final output = await execGit(getDiffArgs(diff: diff, diffFilter: diffFilter),
       workingDirectory: workingDirectory);
-  return parseGitZOutput(output).map((e) => normalize(e));
+  return parseGitZOutput(output).map((e) => normalize(e)).toList();
+}
+
+Future<String> getGitConfigDir() async {
+  final output = await execGit(['rev-parse', '--git-dir']);
+  return output.trim();
 }
