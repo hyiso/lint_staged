@@ -1,3 +1,3 @@
 import 'package:cli_util/cli_logging.dart';
 
-final logger = Logger.standard();
+final logger = Logger.verbose(logTime: false);

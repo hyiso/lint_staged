@@ -3,10 +3,21 @@ import 'dart:io';
 import 'package:lint_staged/src/chunk.dart';
 import 'package:lint_staged/src/git_workflow.dart';
 import 'package:lint_staged/src/logger.dart';
+import 'package:lint_staged/src/state.dart';
+import 'package:lint_staged/src/symbols.dart';
 import 'package:yaml/yaml.dart';
 
 import 'src/git.dart';
+import 'src/message.dart';
 
+///
+/// Root lint-staged function that is called from `bin/lint_staged.dart`.
+///
+/// [allowEmpty] - Allow empty commits when tasks revert all staged changes
+/// [diff] - Override the default "--staged" flag of "git diff" to get list of files
+/// [diffFilter] - Override the default "--diff-filter=ACMR" flag of "git diff" to get list of files
+/// [stash] - Enable the backup stash, and revert in case of errors
+///
 Future<bool> lintStaged({
   bool allowEmpty = false,
   List<String> diff = const [],
@@ -14,13 +25,33 @@ Future<bool> lintStaged({
   bool stash = true,
   String? workingDirectory,
 }) async {
+  final ctx = getInitialState();
+  if (!FileSystemEntity.isDirectorySync('.git') &&
+      !FileSystemEntity.isFileSync('.git')) {
+    ctx.output.add('Current directory is not a git directory!');
+    ctx.errors.add(kGitRepoError);
+    return false;
+  }
+
+  /// Test whether we have any commits or not.
+  /// Stashing must be disabled with no initial commit.
+  final hasInitialCommit =
+      await execGit(['log', '-1']).then((s) => true).catchError((s) => false);
+
+  /// Lint-staged will create a backup stash only when there's an initial commit,
+  /// and when using the default list of staged files by default
+  ctx.shouldBackup = hasInitialCommit && stash;
+  if (!ctx.shouldBackup) {
+    logger.trace(skippingBackup(hasInitialCommit, diff));
+  }
   final files = await getStagedFiles(
     diff: diff,
     diffFilter: diffFilter,
     workingDirectory: workingDirectory,
   );
   if (files == null) {
-    logger.stdout('Failed to get staged files');
+    ctx.output.add('Failed to get staged files!');
+    ctx.errors.add(kGetStagedFilesError);
     return false;
   }
   if (files.isEmpty) {
