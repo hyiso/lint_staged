@@ -17,6 +17,7 @@ Future<LintState> runAll({
   String? diffFilter,
   bool stash = true,
   String? workingDirectory,
+  int maxArgLength = 0,
 }) async {
   final ctx = getInitialState();
   if (!FileSystemEntity.isDirectorySync('.git') &&
@@ -51,7 +52,7 @@ Future<LintState> runAll({
     ctx.output.add('No staged files');
     return ctx;
   }
-  final stagedFileChunks = chunkFiles(files: files);
+  final stagedFileChunks = chunkFiles(files, maxArgLength: maxArgLength);
   if (stagedFileChunks.length > 1) {
     logger.stdout('Chunked staged files into ${stagedFileChunks.length} part');
   }
@@ -69,7 +70,8 @@ Future<LintState> runAll({
   final matchedFiles = files.where((file) => file.endsWith('.dart')).toList();
   final linter =
       Linter(matchedFiles: matchedFiles, scripts: foundConfigs['.dart'] ?? []);
-  final matchedFileChunks = chunkFiles(files: matchedFiles);
+  final matchedFileChunks =
+      chunkFiles(matchedFiles, maxArgLength: maxArgLength);
   final git = GitWorkflow(
     allowEmpty: allowEmpty,
     gitConfigDir: await getGitConfigDir(),

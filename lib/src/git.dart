@@ -52,7 +52,9 @@ Future<String> execGit(
 /// remove the last occurrence of `\u0000` before splitting
 ///
 List<String> parseGitZOutput(String input) {
-  return input.isEmpty ? [] : input.replaceAll(r'\u0000$', '').split('\u0000');
+  return input.isEmpty
+      ? []
+      : input.replaceFirst(RegExp(r'\u0000$'), '').split('\u0000');
 }
 
 Future<List<String>?> getStagedFiles({

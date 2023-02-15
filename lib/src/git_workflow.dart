@@ -85,7 +85,7 @@ class GitWorkflow {
     this.gitConfigDir = '.git',
     this.diff = const [],
     this.diffFilter,
-    required this.matchedFileChunks,
+    this.matchedFileChunks = const [],
   })  : mergeHeadFilename = join(gitConfigDir, kMergeHead),
         mergeModeFilename = join(gitConfigDir, kMergeMode),
         mergeMsgFilename = join(gitConfigDir, kMergeMsg);

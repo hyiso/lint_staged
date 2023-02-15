@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cli_util/cli_logging.dart';
 
 import 'src/logger.dart';
@@ -25,6 +27,7 @@ Future<bool> lintStaged({
         diff: diff,
         diffFilter: diffFilter,
         stash: stash,
+        maxArgLength: _maxArgLength ~/ 2,
         workingDirectory: workingDirectory);
     printTaskOutput(ctx, logger);
     return true;
@@ -39,4 +42,18 @@ void printTaskOutput(LintState ctx, Logger logger) {
   for (var line in ctx.output) {
     log(line);
   }
+}
+
+///
+/// Get the maximum length of a command-line argument string based on current platform
+///
+/// https://serverfault.com/questions/69430/what-is-the-maximum-length-of-a-command-line-in-mac-os-x
+/// https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
+/// https://unix.stackexchange.com/a/120652
+///
+int get _maxArgLength {
+  if (Platform.isMacOS) {
+    return 262144;
+  }
+  return 131072;
 }
