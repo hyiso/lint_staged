@@ -1,29 +1,46 @@
 import 'dart:io';
-import 'dart:typed_data';
 
-///
-/// Read contents of a file to buffer
-///
-Future<Uint8List?> readFile(String path) async {
-  final file = File(path);
-  if (await file.exists()) {
-    return file.readAsBytes();
-  }
-  return null;
-}
+import 'package:path/path.dart';
 
-Future<void> unlink(String filename) async {
-  final file = File(filename);
-  await file.delete();
-}
-
-///
-/// Write buffer to file
-///
-Future<void> writeFile(String path, Uint8List bytes) async {
-  final file = File(path);
+Future<void> appendFile(
+  String filename,
+  String content, {
+  String? workingDirectory,
+}) async {
+  final file = File(join(workingDirectory ?? Directory.current.path, filename));
   if (!await file.exists()) {
     await file.create(recursive: true);
   }
-  file.writeAsBytes(bytes);
+  file.writeAsString(content, mode: FileMode.append);
+}
+
+Future<void> writeFile(
+  String filename,
+  String content, {
+  String? workingDirectory,
+}) async {
+  final file = File(join(workingDirectory ?? Directory.current.path, filename));
+  if (!await file.exists()) {
+    await file.create(recursive: true);
+  }
+  file.writeAsString(content);
+}
+
+Future<void> removeFile(
+  String filename, {
+  String? workingDirectory,
+}) async {
+  final file = File(join(workingDirectory ?? Directory.current.path, filename));
+  await file.delete(recursive: true);
+}
+
+Future<String?> readFile(
+  String filename, {
+  String? workingDirectory,
+}) async {
+  final file = File(join(workingDirectory ?? Directory.current.path, filename));
+  if (await file.exists()) {
+    return await file.readAsString();
+  }
+  return null;
 }

@@ -7,14 +7,17 @@ class Task {
 
   String path;
 
-  Task(this.scripts, this.path);
+  String? workingDirectory;
+
+  Task(this.scripts, this.path, {this.workingDirectory});
 
   Future<ProcessResult?> run() async {
     ProcessResult? result;
     for (var script in scripts) {
       final command = script.split(' ');
-      logger.stdout('${command.join(' ')} $path');
-      final res = await Process.run(command.removeAt(0), [...command, path]);
+      logger.trace('${command.join(' ')} $path');
+      final res = await Process.run(command.removeAt(0), [...command, path],
+          workingDirectory: workingDirectory);
       result = res + result;
     }
     return result;
@@ -35,10 +38,16 @@ class Linter {
   List<String> matchedFiles;
   List<String> scripts;
   List<Task> tasks;
+  String? workingDirectory;
+
   Linter({
     required this.matchedFiles,
     required this.scripts,
-  }) : tasks = matchedFiles.map((file) => Task(scripts, file)).toList();
+    this.workingDirectory,
+  }) : tasks = matchedFiles
+            .map((file) =>
+                Task(scripts, file, workingDirectory: workingDirectory))
+            .toList();
 
   Future<void> run() async {
     await Future.wait(tasks.map((task) => task.run()));

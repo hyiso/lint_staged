@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
+import 'package:lint_staged/src/exception.dart';
 import 'package:lint_staged/src/symbols.dart';
 import 'package:path/path.dart';
 
 import 'file.dart';
 import 'git.dart';
 import 'logger.dart';
-import 'state.dart';
+import 'context.dart';
 
 /// In git status machine output, renames are presented as `to`NUL`from`
 /// When diffing, both need to be taken into account, but in some cases on the `to`.
@@ -68,6 +68,8 @@ class GitWorkflow {
   late List<String> partiallyStagedFiles;
   late List<String> deletedFiles;
 
+  String? workingDirectory;
+
   ///
   /// These three files hold state about an ongoing git merge
   /// Resolve paths during constructor
@@ -76,9 +78,9 @@ class GitWorkflow {
   final String mergeModeFilename;
   final String mergeMsgFilename;
 
-  Uint8List? mergeHeadBuffer;
-  Uint8List? mergeModeBuffer;
-  Uint8List? mergeMsgBuffer;
+  String? mergeHeadContent;
+  String? mergeModeContent;
+  String? mergeMsgContent;
 
   GitWorkflow({
     this.allowEmpty = false,
@@ -86,6 +88,7 @@ class GitWorkflow {
     this.diff = const [],
     this.diffFilter,
     this.matchedFileChunks = const [],
+    this.workingDirectory,
   })  : mergeHeadFilename = join(gitConfigDir, kMergeHead),
         mergeModeFilename = join(gitConfigDir, kMergeMode),
         mergeMsgFilename = join(gitConfigDir, kMergeMsg);
@@ -101,8 +104,9 @@ class GitWorkflow {
   ///
   /// Get name of backup stash
   ///
-  Future<String> getBackupStash(LintState ctx) async {
-    final stashes = await execGit(['stash', 'list']);
+  Future<String> getBackupStash(LintStagedContext ctx) async {
+    final stashes =
+        await execGit(['stash', 'list'], workingDirectory: workingDirectory);
     final index =
         stashes.split('\n').indexWhere((line) => line.contains(kStash));
     if (index == -1) {
@@ -126,7 +130,8 @@ class GitWorkflow {
   ///
   Future<List<String>> getDeletedFiles() async {
     logger.trace('Getting deleted files...');
-    final lsFiles = await execGit(['ls-files', '--deleted']);
+    final lsFiles = await execGit(['ls-files', '--deleted'],
+        workingDirectory: workingDirectory);
     final files =
         lsFiles.split('\n').where((line) => line.trim().isNotEmpty).toList();
     logger.trace('Found deleted files: $files');
@@ -139,9 +144,12 @@ class GitWorkflow {
   Future<void> backupMergeStatus() async {
     logger.trace('Backing up merge state...');
     await Future.wait([
-      readFile(mergeHeadFilename).then((value) => mergeHeadBuffer = value),
-      readFile(mergeModeFilename).then((value) => mergeModeBuffer = value),
-      readFile(mergeMsgFilename).then((value) => mergeModeBuffer = value)
+      readFile(mergeHeadFilename, workingDirectory: workingDirectory)
+          .then((value) => mergeHeadContent = value),
+      readFile(mergeModeFilename, workingDirectory: workingDirectory)
+          .then((value) => mergeModeContent = value),
+      readFile(mergeMsgFilename, workingDirectory: workingDirectory)
+          .then((value) => mergeModeContent = value)
     ]);
     logger.trace('Done backing up merge state!');
   }
@@ -149,16 +157,19 @@ class GitWorkflow {
   ///
   /// Restore meta information about ongoing git merge
   ///
-  Future<void> restoreMergeStatus(LintState ctx) async {
+  Future<void> restoreMergeStatus(LintStagedContext ctx) async {
     logger.trace('Restoring merge state...');
     try {
       await Future.wait([
-        if (mergeHeadBuffer != null)
-          writeFile(mergeHeadFilename, mergeHeadBuffer!),
-        if (mergeModeBuffer != null)
-          writeFile(mergeModeFilename, mergeModeBuffer!),
-        if (mergeMsgBuffer != null)
-          writeFile(mergeMsgFilename, mergeMsgBuffer!),
+        if (mergeHeadContent != null)
+          writeFile(mergeHeadFilename, mergeHeadContent!,
+              workingDirectory: workingDirectory),
+        if (mergeModeContent != null)
+          writeFile(mergeModeFilename, mergeModeContent!,
+              workingDirectory: workingDirectory),
+        if (mergeMsgContent != null)
+          writeFile(mergeMsgFilename, mergeMsgContent!,
+              workingDirectory: workingDirectory),
       ]);
       logger.trace('Done restoring merge state!');
     } catch (e) {
@@ -174,7 +185,8 @@ class GitWorkflow {
   /// both the "from" and "to" filenames, where "from" is no longer on disk.
   ///
   Future<List<String>> getPartiallyStagedFiles() async {
-    final status = await execGit(['status', '-z']);
+    final status =
+        await execGit(['status', '-z'], workingDirectory: workingDirectory);
     if (status.isEmpty) {
       return [];
     }
@@ -213,7 +225,7 @@ class GitWorkflow {
   ///
   /// Create a diff of partially staged files and backup stash if enabled.
   ///
-  Future<void> prepare(LintState ctx) async {
+  Future<void> prepare(LintStagedContext ctx) async {
     try {
       logger.trace('Backing up original state...');
       partiallyStagedFiles = await getPartiallyStagedFiles();
@@ -228,7 +240,7 @@ class GitWorkflow {
           unstagedPatch,
           '--',
           ...files
-        ]);
+        ], workingDirectory: workingDirectory);
       } else {
         ctx.hasPartiallyStagedFiles = false;
       }
@@ -249,8 +261,10 @@ class GitWorkflow {
       // Save stash of all staged files.
       // The `stash create` command creates a dangling commit without removing any files,
       // and `stash store` saves it as an actual stash.
-      final hash = await execGit(['stash', 'create']);
-      await execGit(['stash', 'store', '--quiet', '--message', kStash, hash]);
+      final hash = await execGit(['stash', 'create'],
+          workingDirectory: workingDirectory);
+      await execGit(['stash', 'store', '--quiet', '--message', kStash, hash],
+          workingDirectory: workingDirectory);
 
       logger.trace('Done backing up original state!');
     } catch (e) {
@@ -261,10 +275,11 @@ class GitWorkflow {
   ///
   /// Remove unstaged changes to all partially staged files, to avoid tasks from seeing them
   ///
-  Future<void> hideUnstagedChanges(LintState ctx) async {
+  Future<void> hideUnstagedChanges(LintStagedContext ctx) async {
     try {
       final files = processRenames(partiallyStagedFiles, false);
-      await execGit(['checkout', '--force', '--', ...files]);
+      await execGit(['checkout', '--force', '--', ...files],
+          workingDirectory: workingDirectory);
     } catch (e) {
       ///
       ///`git checkout --force` doesn't throw errors, so it shouldn't be possible to get here.
@@ -278,7 +293,7 @@ class GitWorkflow {
   /// Applies back task modifications, and unstaged changes hidden in the stash.
   /// In case of a merge-conflict retry with 3-way merge.
   ///
-  Future<void> applyModifications(LintState ctx) async {
+  Future<void> applyModifications(LintStagedContext ctx) async {
     logger.trace('Adding task modifications to index...');
 
     /// `matchedFileChunks` includes staged files that lint-staged originally detected and matched against a task.
@@ -286,13 +301,15 @@ class GitWorkflow {
     /// These additions per chunk are run "serially" to prevent race conditions.
     /// Git add creates a lockfile in the repo causing concurrent operations to fail.
     for (var files in matchedFileChunks) {
-      await execGit(['add', '--', ...files]);
+      await execGit(['add', '--', ...files],
+          workingDirectory: workingDirectory);
     }
     logger.trace('Done adding task modifications to index!');
 
-    final stagedFilesAfterAdd =
-        await execGit(getDiffArgs(diff: diff, diffFilter: diffFilter));
-    if (stagedFilesAfterAdd.isEmpty && !allowEmpty) {
+    final stagedFilesAfterAdd = await execGit(
+        getDiffArgs(diff: diff, diffFilter: diffFilter),
+        workingDirectory: workingDirectory);
+    if (stagedFilesAfterAdd.trim().isEmpty && !allowEmpty) {
       handleError(Exception('Prevented an empty git commit!'), ctx,
           kApplyEmptyCommitError);
     }
@@ -303,18 +320,20 @@ class GitWorkflow {
   /// this is probably because of conflicts between new task modifications.
   /// 3-way merge usually fixes this, and in case it doesn't we should just give up and throw.
   ///
-  Future<void> resotreUnstagedChanges(LintState ctx) async {
+  Future<void> resotreUnstagedChanges(LintStagedContext ctx) async {
     logger.trace('Restoring unstaged changes...');
     final unstagedPatch = getHiddenFilepath(kPatchUnstaged);
     try {
-      await execGit(['apply', ...kGitApplyArgs, unstagedPatch]);
+      await execGit(['apply', ...kGitApplyArgs, unstagedPatch],
+          workingDirectory: workingDirectory);
     } catch (applyError) {
       logger.trace('Error while restoring changes:');
       logger.trace(applyError.toString());
       logger.trace('Retrying with 3-way merge');
       try {
         // Retry with a 3-way merge if normal apply fails
-        await execGit(['apply', ...kGitApplyArgs, '--3way', unstagedPatch]);
+        await execGit(['apply', ...kGitApplyArgs, '--3way', unstagedPatch],
+            workingDirectory: workingDirectory);
       } catch (threeWayApplyError) {
         logger
             .trace('Error while restoring unstaged changes using 3-way merge:');
@@ -331,21 +350,25 @@ class GitWorkflow {
   ///
   /// Restore original HEAD state in case of errors
   ///
-  Future<void> restoreOriginState(LintState ctx) async {
+  Future<void> restoreOriginState(LintStagedContext ctx) async {
     try {
       logger.trace('Restoring original state...');
-      await execGit(['reset', '--hard', 'HEAD']);
+      await execGit(['reset', '--hard', 'HEAD'],
+          workingDirectory: workingDirectory);
       await execGit(
-          ['stash', 'apply', '--quiet', '--index', await getBackupStash(ctx)]);
+          ['stash', 'apply', '--quiet', '--index', await getBackupStash(ctx)],
+          workingDirectory: workingDirectory);
 
       /// Restore meta information about ongoing git merge
       await restoreMergeStatus(ctx);
 
       /// If stashing resurrected deleted files, clean them out
-      await Future.wait(deletedFiles.map((file) => unlink(file)));
+      await Future.wait(deletedFiles
+          .map((file) => removeFile(file, workingDirectory: workingDirectory)));
 
       // Clean out patch
-      await unlink(getHiddenFilepath(kPatchUnstaged));
+      await removeFile(getHiddenFilepath(kPatchUnstaged),
+          workingDirectory: workingDirectory);
 
       logger.trace('Done restoring original state!');
     } catch (error) {
@@ -356,21 +379,22 @@ class GitWorkflow {
   ///
   /// Drop the created stashes after everything has run
   ///
-  Future<void> cleanup(LintState ctx) async {
+  Future<void> cleanup(LintStagedContext ctx) async {
     try {
       logger.trace('Dropping backup stash...');
-      await execGit(['stash', 'drop', '--quiet', await getBackupStash(ctx)]);
+      await execGit(['stash', 'drop', '--quiet', await getBackupStash(ctx)],
+          workingDirectory: workingDirectory);
       logger.trace('Done dropping backup stash!');
     } catch (error) {
       handleError(error, ctx);
     }
   }
 
-  void handleError(e, LintState ctx, [Symbol? symbol]) {
+  void handleError(e, LintStagedContext ctx, [Symbol? symbol]) {
     ctx.errors.add(kGitError);
     if (symbol != null) {
       ctx.errors.add(symbol);
     }
-    // throw e;
+    throw createError(ctx);
   }
 }

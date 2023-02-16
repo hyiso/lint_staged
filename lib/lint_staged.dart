@@ -1,10 +1,13 @@
 import 'dart:io';
 
 import 'package:cli_util/cli_logging.dart';
+import 'package:lint_staged/src/message.dart';
 
+import 'src/exception.dart';
 import 'src/logger.dart';
 import 'src/run.dart';
-import 'src/state.dart';
+import 'src/context.dart';
+import 'src/symbols.dart';
 
 ///
 /// Root lint-staged function that is called from `bin/lint_staged.dart`.
@@ -32,11 +35,29 @@ Future<bool> lintStaged({
     printTaskOutput(ctx, logger);
     return true;
     // ignore: empty_catches
-  } catch (e) {}
-  return false;
+  } catch (e) {
+    if (e is LintStagedEeception && e.ctx.errors.isNotEmpty) {
+      if (e.ctx.errors.contains(kConfigNotFoundError)) {
+        logger.stdout(kNoConfigurationMsg);
+      } else if (e.ctx.errors.contains(kApplyEmptyCommitError)) {
+        logger.stdout(kPreventedEmptyCommitMsg);
+      } else if (e.ctx.errors.contains(kGitError) &&
+          !e.ctx.errors.contains(kGetBackupStashError)) {
+        logger.stdout(kGitErrorMsg);
+        if (e.ctx.shouldBackup) {
+          // No sense to show this if the backup stash itself is missing.
+          logger.stdout(kRestoreStashExampleMsg);
+        }
+      }
+
+      printTaskOutput(e.ctx, logger);
+      return false;
+    }
+    rethrow;
+  }
 }
 
-void printTaskOutput(LintState ctx, Logger logger) {
+void printTaskOutput(LintStagedContext ctx, Logger logger) {
   if (ctx.output.isEmpty) return;
   final log = ctx.errors.isNotEmpty ? logger.stderr : logger.stdout;
   for (var line in ctx.output) {

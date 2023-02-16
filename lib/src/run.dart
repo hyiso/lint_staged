@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:lint_staged/src/config.dart';
+import 'package:lint_staged/src/exception.dart';
 import 'package:lint_staged/src/linter.dart';
 
 import 'chunk.dart';
@@ -8,10 +9,10 @@ import 'git.dart';
 import 'git_workflow.dart';
 import 'logger.dart';
 import 'message.dart';
-import 'state.dart';
+import 'context.dart';
 import 'symbols.dart';
 
-Future<LintState> runAll({
+Future<LintStagedContext> runAll({
   bool allowEmpty = false,
   List<String> diff = const [],
   String? diffFilter,
@@ -19,24 +20,26 @@ Future<LintState> runAll({
   String? workingDirectory,
   int maxArgLength = 0,
 }) async {
-  final ctx = getInitialState();
+  final ctx = getInitialContext();
   if (!FileSystemEntity.isDirectorySync('.git') &&
       !FileSystemEntity.isFileSync('.git')) {
-    ctx.output.add('Current directory is not a git directory!');
+    ctx.output.add(kNotGitRepoMsg);
     ctx.errors.add(kGitRepoError);
-    return ctx;
+    throw createError(ctx);
   }
 
   /// Test whether we have any commits or not.
   /// Stashing must be disabled with no initial commit.
   final hasInitialCommit =
-      await execGit(['log', '-1']).then((s) => true).catchError((s) => false);
+      await execGit(['log', '-1'], workingDirectory: workingDirectory)
+          .then((s) => true)
+          .catchError((s) => false);
 
   /// Lint-staged will create a backup stash only when there's an initial commit,
   /// and when using the default list of staged files by default
   ctx.shouldBackup = hasInitialCommit && stash;
   if (!ctx.shouldBackup) {
-    logger.trace(skippingBackup(hasInitialCommit, diff));
+    logger.trace(skippingBackupMsg(hasInitialCommit, diff));
   }
   final files = await getStagedFiles(
     diff: diff,
@@ -44,12 +47,12 @@ Future<LintState> runAll({
     workingDirectory: workingDirectory,
   );
   if (files == null) {
-    ctx.output.add('Failed to get staged files!');
+    ctx.output.add(kGetStagedFilesErrorMsg);
     ctx.errors.add(kGetStagedFilesError);
-    return ctx;
+    throw createError(ctx);
   }
   if (files.isEmpty) {
-    ctx.output.add('No staged files');
+    ctx.output.add(kNoStagedFilesMsg);
     return ctx;
   }
   final stagedFileChunks = chunkFiles(files, maxArgLength: maxArgLength);
@@ -57,10 +60,10 @@ Future<LintState> runAll({
     logger.stdout('Chunked staged files into ${stagedFileChunks.length} part');
   }
 
-  final foundConfigs = await loadConifg();
-  if (foundConfigs == null || foundConfigs.isEmpty) {
+  final foundConfigs = await loadConifg(workingDirectory: workingDirectory);
+  if (foundConfigs == null) {
     ctx.errors.add(kConfigNotFoundError);
-    return ctx;
+    throw createError(ctx);
   }
   if (foundConfigs.isEmpty) {
     ctx.errors.add(kConfigEmptyError);
@@ -68,8 +71,10 @@ Future<LintState> runAll({
   }
 
   final matchedFiles = files.where((file) => file.endsWith('.dart')).toList();
-  final linter =
-      Linter(matchedFiles: matchedFiles, scripts: foundConfigs['.dart'] ?? []);
+  final linter = Linter(
+      matchedFiles: matchedFiles,
+      scripts: foundConfigs['.dart'] ?? [],
+      workingDirectory: workingDirectory);
   final matchedFileChunks =
       chunkFiles(matchedFiles, maxArgLength: maxArgLength);
   final git = GitWorkflow(
@@ -78,6 +83,7 @@ Future<LintState> runAll({
     diff: diff,
     diffFilter: diffFilter,
     matchedFileChunks: matchedFileChunks,
+    workingDirectory: workingDirectory,
   );
   logger.stdout('Preparing lint_staged...');
   await git.prepare(ctx);

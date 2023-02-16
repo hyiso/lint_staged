@@ -1,6 +1,6 @@
 import 'symbols.dart';
 
-class LintState {
+class LintStagedContext {
   bool hasPartiallyStagedFiles = false;
   bool shouldBackup = false;
   Set<Object> errors = {};
@@ -68,4 +68,4 @@ class LintState {
   }
 }
 
-LintState getInitialState() => LintState();
+LintStagedContext getInitialContext() => LintStagedContext();
