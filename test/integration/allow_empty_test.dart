@@ -7,7 +7,7 @@ import '__fixtures__/file.dart';
 import 'utils.dart';
 
 void main() {
-  group('lint_staged --allow-empty', () {
+  group('lint_staged', () {
     test(
         'fails when task reverts staged changes without `--allow-empty`, to prevent an empty git commit',
         () async {
