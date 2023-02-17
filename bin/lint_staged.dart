@@ -28,6 +28,7 @@ void main(List<String> arguments) async {
       diff: diff,
       diffFilter: diffFilter,
       stash: stash,
+      maxArgLength: _maxArgLength ~/ 2,
     );
     exit(passed ? 0 : 1);
   } catch (e, stack) {
@@ -35,4 +36,18 @@ void main(List<String> arguments) async {
     print(stack);
     exit(1);
   }
+}
+
+///
+/// Get the maximum length of a command-line argument string based on current platform
+///
+/// https://serverfault.com/questions/69430/what-is-the-maximum-length-of-a-command-line-in-mac-os-x
+/// https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
+/// https://unix.stackexchange.com/a/120652
+///
+int get _maxArgLength {
+  if (Platform.isMacOS) {
+    return 262144;
+  }
+  return 131072;
 }

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:lint_staged/src/config.dart';
 import 'package:lint_staged/src/exception.dart';
-import 'package:lint_staged/src/linter.dart';
+import 'package:lint_staged/src/list_runner.dart';
 
 import 'chunk.dart';
 import 'git.dart';
@@ -25,7 +25,7 @@ Future<LintStagedContext> runAll({
       !FileSystemEntity.isFileSync('.git')) {
     ctx.output.add(kNotGitRepoMsg);
     ctx.errors.add(kGitRepoError);
-    throw createError(ctx);
+    throw createError(ctx, kNotGitRepoMsg);
   }
 
   /// Test whether we have any commits or not.
@@ -35,7 +35,7 @@ Future<LintStagedContext> runAll({
           .then((s) => true)
           .catchError((s) => false);
 
-  /// Lint-staged will create a backup stash only when there's an initial commit,
+  /// lint_staged will create a backup stash only when there's an initial commit,
   /// and when using the default list of staged files by default
   ctx.shouldBackup = hasInitialCommit && stash;
   if (!ctx.shouldBackup) {
@@ -49,7 +49,7 @@ Future<LintStagedContext> runAll({
   if (files == null) {
     ctx.output.add(kGetStagedFilesErrorMsg);
     ctx.errors.add(kGetStagedFilesError);
-    throw createError(ctx);
+    throw createError(ctx, kNoStagedFilesMsg);
   }
   if (files.isEmpty) {
     ctx.output.add(kNoStagedFilesMsg);
@@ -63,7 +63,7 @@ Future<LintStagedContext> runAll({
   final foundConfigs = await loadConifg(workingDirectory: workingDirectory);
   if (foundConfigs == null) {
     ctx.errors.add(kConfigNotFoundError);
-    throw createError(ctx);
+    throw createError(ctx, kNoConfigurationMsg);
   }
   if (foundConfigs.isEmpty) {
     ctx.errors.add(kConfigEmptyError);
@@ -71,7 +71,8 @@ Future<LintStagedContext> runAll({
   }
 
   final matchedFiles = files.where((file) => file.endsWith('.dart')).toList();
-  final linter = Linter(
+  final runner = ListRunner(
+      ctx: ctx,
       matchedFiles: matchedFiles,
       scripts: foundConfigs['.dart'] ?? [],
       workingDirectory: workingDirectory);
@@ -92,22 +93,25 @@ Future<LintStagedContext> runAll({
     await git.hideUnstagedChanges(ctx);
   }
   logger.stdout('Running tasks for staged files...');
-  await linter.run();
-  if (!ctx.applyModifationsSkipped) {
+  await runner.run();
+  if (!applyModifationsSkipped(ctx)) {
     logger.stdout('Applying modifications from tasks...');
     await git.applyModifications(ctx);
   }
-  if (ctx.hasPartiallyStagedFiles && !ctx.restoreUnstagedChangesSkipped) {
+  if (ctx.hasPartiallyStagedFiles && !restoreUnstagedChangesSkipped(ctx)) {
     logger.stdout('Restoring unstaged changes to partially staged files...');
     await git.resotreUnstagedChanges(ctx);
   }
-  if (ctx.restoreOriginalStateEnabled && !ctx.restoreOriginalStateSkipped) {
+  if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
     logger.stdout('Reverting to original state because of errors...');
     await git.restoreOriginState(ctx);
   }
-  if (ctx.cleanupEnabled && !ctx.cleanupSkipped) {
+  if (cleanupEnabled(ctx) && !cleanupSkipped(ctx)) {
     logger.stdout('Cleaning up temporary files...');
     await git.cleanup(ctx);
+  }
+  if (ctx.errors.isNotEmpty) {
+    throw createError(ctx);
   }
   return ctx;
 }

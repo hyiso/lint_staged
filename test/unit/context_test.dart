@@ -3,32 +3,32 @@ import 'package:lint_staged/src/symbols.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('LintState', () {
+  group('LintStagedContext', () {
     group('applyModificationsSkipped', () {
       test('should return false when backup is disabled', () {
         final ctx = getInitialContext()..shouldBackup = false;
-        expect(ctx.applyModifationsSkipped, false);
+        expect(applyModifationsSkipped(ctx), false);
       });
 
       test('should return error message when there is an unkown git error', () {
         final ctx = getInitialContext()
           ..shouldBackup = true
           ..errors = {kGitError};
-        expect(ctx.applyModifationsSkipped, true);
+        expect(applyModifationsSkipped(ctx), true);
       });
     });
 
     group('restoreUnstagedChangesSkipped', () {
       test('should return error message when there is an unkown git error', () {
         final ctx = getInitialContext()..errors = {kGitError};
-        expect(ctx.restoreUnstagedChangesSkipped, true);
+        expect(restoreUnstagedChangesSkipped(ctx), true);
       });
     });
 
     group('restoreOriginalStateSkipped', () {
       test('should return error message when there is an unkown git error', () {
         final ctx = getInitialContext()..errors = {kGitError};
-        expect(ctx.restoreOriginalStateSkipped, true);
+        expect(restoreOriginalStateSkipped(ctx), true);
       });
     });
 
@@ -36,7 +36,7 @@ void main() {
       test('should return error message when reverting to original state fails',
           () {
         final ctx = getInitialContext()..errors = {kRestoreOriginalStateError};
-        expect(ctx.cleanupSkipped, true);
+        expect(cleanupSkipped(ctx), true);
       });
     });
   });

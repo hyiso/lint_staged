@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:lint_staged/src/logger.dart';
 import 'package:path/path.dart';
 
 ///
@@ -41,9 +42,18 @@ Future<String> execGit(
   List<String> args, {
   String? workingDirectory,
 }) async {
-  final result = await Process.run('git', [...kNoSubmoduleRecurse, ...args],
-      workingDirectory: workingDirectory);
-  return result.stdout as String;
+  final gitArgs = [...kNoSubmoduleRecurse, ...args];
+  logger.trace('git ${gitArgs.join(' ')}');
+  final result =
+      await Process.run('git', gitArgs, workingDirectory: workingDirectory);
+  if (result.exitCode != 0) {
+    throw result.stderr;
+  }
+  String output = result.stdout as String;
+  if (output.endsWith('\n')) {
+    output = output.replaceFirst(RegExp(r'(\n)+$'), '');
+  }
+  return output;
 }
 
 ///
@@ -68,6 +78,5 @@ Future<List<String>?> getStagedFiles({
 }
 
 Future<String> getGitConfigDir() async {
-  final output = await execGit(['rev-parse', '--git-dir']);
-  return output.trim();
+  return await execGit(['rev-parse', '--git-dir']);
 }

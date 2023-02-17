@@ -23,6 +23,6 @@ const kPreventedEmptyCommitMsg = '''lint_staged prevented an empty git commit.
 const kRestoreStashExampleMsg =
     '''  Any lost modifications can be restored from a git stash:
     > git stash list
-    stash@{0}: automatic lint-staged backup
+    stash@{0}: automatic lint_staged backup
     > git stash apply --index stash@{0}
 ''';

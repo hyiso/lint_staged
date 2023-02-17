@@ -35,13 +35,16 @@ Future<void> initialCommit(String workingDirectory) async {
 
 Future<void> gitCommit({
   bool allowEmpty = false,
+  int maxArgLength = 0,
   List<String>? gitCommitArgs,
   required String workingDirectory,
 }) async {
   final passed = await lintStaged(
-      allowEmpty: allowEmpty, workingDirectory: workingDirectory);
+      maxArgLength: maxArgLength,
+      allowEmpty: allowEmpty,
+      workingDirectory: workingDirectory);
   if (!passed) {
-    throw Exception('');
+    throw Exception('lint_staged not passed!');
   }
   final commitArgs = gitCommitArgs ?? ['-m test'];
   await execGit(['commit', ...commitArgs], workingDirectory: workingDirectory);

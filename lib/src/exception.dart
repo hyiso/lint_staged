@@ -1,6 +1,6 @@
 import 'context.dart';
 
-class LintStagedEeception implements Exception {
+class LintStagedException implements Exception {
   /// Message describing the assertion error.
   final Object? message;
 
@@ -8,17 +8,16 @@ class LintStagedEeception implements Exception {
   final LintStagedContext ctx;
 
   /// Creates an assertion error with the provided [message].
-  LintStagedEeception(this.ctx, [this.message]);
+  LintStagedException(this.ctx, [this.message]);
 
   @override
   String toString() {
     if (message != null) {
-      return "Assertion failed: ${Error.safeToString(message)}";
+      return "lint_staged failed: ${Error.safeToString(message)}";
     }
-    return "Assertion failed";
+    return "lint_staged failed";
   }
 }
 
-LintStagedEeception createError(LintStagedContext ctx,
-        [String message = 'lint_staged failed']) =>
-    LintStagedEeception(ctx, message);
+LintStagedException createError(LintStagedContext ctx, [String? message]) =>
+    LintStagedException(ctx, message);

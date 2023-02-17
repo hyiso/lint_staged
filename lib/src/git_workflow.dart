@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:lint_staged/src/exception.dart';
 import 'package:lint_staged/src/symbols.dart';
 import 'package:path/path.dart';
 
@@ -111,10 +110,10 @@ class GitWorkflow {
         stashes.split('\n').indexWhere((line) => line.contains(kStash));
     if (index == -1) {
       ctx.errors.add(kGetBackupStashError);
-      throw Exception('lint-staged automatic backup is missing!');
+      throw Exception('lint_staged automatic backup is missing!');
     }
 
-    /// https://github.com/okonet/lint-staged/issues/1121
+    /// https://github.com/okonet/lint_staged/issues/1121
     /// Detect MSYS in login shell mode and escape braces
     /// to prevent interpolation
     if (Platform.environment['MSYSTEM']?.isNotEmpty == true &&
@@ -175,7 +174,10 @@ class GitWorkflow {
     } catch (e) {
       logger.trace('Failed restoring merge state with error:');
       logger.trace(e.toString());
-      handleError(e, ctx, kRestoreMergeStatusError);
+      handleError(
+          Exception('Merge state could not be restored due to an error!'),
+          ctx,
+          kRestoreMergeStatusError);
     }
   }
 
@@ -283,7 +285,7 @@ class GitWorkflow {
     } catch (e) {
       ///
       ///`git checkout --force` doesn't throw errors, so it shouldn't be possible to get here.
-      // If this does fail, the handleError method will set ctx.gitError and lint-staged will fail.
+      // If this does fail, the handleError method will set ctx.gitError and lint_staged will fail.
       ///
       handleError(e, ctx, kHideUnstagedChangesError);
     }
@@ -296,7 +298,7 @@ class GitWorkflow {
   Future<void> applyModifications(LintStagedContext ctx) async {
     logger.trace('Adding task modifications to index...');
 
-    /// `matchedFileChunks` includes staged files that lint-staged originally detected and matched against a task.
+    /// `matchedFileChunks` includes staged files that lint_staged originally detected and matched against a task.
     /// Add only these files so any 3rd-party edits to other files won't be included in the commit.
     /// These additions per chunk are run "serially" to prevent race conditions.
     /// Git add creates a lockfile in the repo causing concurrent operations to fail.
@@ -309,7 +311,7 @@ class GitWorkflow {
     final stagedFilesAfterAdd = await execGit(
         getDiffArgs(diff: diff, diffFilter: diffFilter),
         workingDirectory: workingDirectory);
-    if (stagedFilesAfterAdd.trim().isEmpty && !allowEmpty) {
+    if (stagedFilesAfterAdd.isEmpty && !allowEmpty) {
       handleError(Exception('Prevented an empty git commit!'), ctx,
           kApplyEmptyCommitError);
     }
@@ -395,6 +397,6 @@ class GitWorkflow {
     if (symbol != null) {
       ctx.errors.add(symbol);
     }
-    throw createError(ctx);
+    // throw e;
   }
 }
