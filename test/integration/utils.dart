@@ -9,7 +9,7 @@ class IntegrationProject {
 
   IntegrationProject()
       : dir = join(Directory.systemTemp.path, 'tmp',
-            'husky_test_${DateTime.now().millisecondsSinceEpoch}');
+            'husky_test_${DateTime.now().microsecondsSinceEpoch}');
 
   Future<void> setup({bool initialCommit = true}) async {
     /// Git init
@@ -39,16 +39,18 @@ class IntegrationProject {
     bool allowEmpty = false,
     int maxArgLength = 0,
     List<String>? gitCommitArgs,
+    String? workingDirectory,
   }) async {
     final passed = await lintStaged(
         maxArgLength: maxArgLength,
         allowEmpty: allowEmpty,
-        workingDirectory: dir);
+        workingDirectory: workingDirectory ?? dir);
     if (!passed) {
       throw Exception('lint_staged not passed!');
     }
     final commitArgs = gitCommitArgs ?? ['-m test'];
-    await execGit(['commit', ...commitArgs]);
+    await git.execGit(['commit', ...commitArgs],
+        workingDirectory: workingDirectory ?? dir);
   }
 
   Future<void> appendFile(String filename, String content) =>
