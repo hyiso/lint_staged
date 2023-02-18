@@ -1,5 +1,3 @@
-import 'package:lint_staged/src/file.dart';
-import 'package:lint_staged/src/git.dart';
 import 'package:test/test.dart';
 
 import '__fixtures__/config.dart';
@@ -9,228 +7,213 @@ import 'utils.dart';
 void main() {
   group('lint_staged', () {
     test('commits entire staged file when no errors from linter', () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
       // Stage formatted file
-      await writeFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted file
-      await gitCommit(workingDirectory: dir);
+      await project.gitCommit();
 
       // Nothing is wrong, so a new commit created
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('2'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('2'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kFormattedDart));
+      expect(await project.readFile('lib/main.dart'), equals(kFormattedDart));
     });
 
     test('commits entire staged file when no errors and linter modifies file',
         () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatFix, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatFix);
 
       // Stage multi unformatted files
-      await writeFile('lib/main.dart', kUnFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
 
-      await writeFile('lib/foo.dart', kUnFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/foo.dart'], workingDirectory: dir);
+      await project.writeFile('lib/foo.dart', kUnFormattedDart);
+      await project.execGit(['add', 'lib/foo.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await gitCommit(workingDirectory: dir);
+      await project.gitCommit();
 
       // Nothing was wrong so the empty commit is created
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('2'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('2'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kFormattedDart));
-      expect(await readFile('lib/foo.dart', workingDirectory: dir),
-          equals(kFormattedDart));
+      expect(await project.readFile('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.readFile('lib/foo.dart'), equals(kFormattedDart));
     });
 
     test('fails to commit entire staged file when errors from linter',
         () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
       // Stage unformatted file
-      await writeFile('lib/main.dart', kUnFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
-      final status = await execGit(['status'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
+      final status = await project.execGit(['status']);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await expectLater(gitCommit(workingDirectory: dir), throwsException);
+      await expectLater(project.gitCommit(), throwsException);
 
       // Nothing was wrong so the empty commit is created
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('1'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('1'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
-      expect(await execGit(['status'], workingDirectory: dir), equals(status));
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kUnFormattedDart));
+      expect(await project.execGit(['status']), equals(status));
+      expect(await project.readFile('lib/main.dart'), equals(kUnFormattedDart));
     });
 
     test(
         'fails to commit entire staged file when errors from linter and linter modifies files',
         () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatFix, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatFix);
 
       // Stage invalid file
-      await writeFile('lib/main.dart', kInvalidDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
-      final status = await execGit(['status'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kInvalidDart);
+      await project.execGit(['add', 'lib/main.dart']);
+      final status = await project.execGit(['status']);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await expectLater(gitCommit(workingDirectory: dir), throwsException);
+      await expectLater(project.gitCommit(), throwsException);
 
       // Nothing was wrong so the empty commit is created
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('1'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('1'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
-      expect(await execGit(['status'], workingDirectory: dir), equals(status));
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kInvalidDart));
+      expect(await project.execGit(['status']), equals(status));
+      expect(await project.readFile('lib/main.dart'), equals(kInvalidDart));
     });
 
     test('clears unstaged changes when linter applies same changes', () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await appendFile('pubspec.yaml', kConfigFormatFix, workingDirectory: dir);
+      await project.appendFile('pubspec.yaml', kConfigFormatFix);
 
       // Stage unformatted file
-      await appendFile('lib/main.dart', kUnFormattedDart,
-          workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.appendFile(
+        'lib/main.dart',
+        kUnFormattedDart,
+      );
+      await project.execGit(['add', 'lib/main.dart']);
 
       // Replace unformatted file with formatted but do not stage changes
-      await removeFile('lib/main.dart', workingDirectory: dir);
-      await appendFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
+      await project.removeFile('lib/main.dart');
+      await project.appendFile('lib/main.dart', kFormattedDart);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await gitCommit(workingDirectory: dir);
+      await project.gitCommit();
 
       // Nothing was wrong so the empty commit is created
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('2'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('2'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('test'));
 
       // Latest commit contains pretty file
       // `git show` strips empty line from here here
-      expect(
-          await execGit(['show', 'HEAD:lib/main.dart'], workingDirectory: dir),
+      expect(await project.execGit(['show', 'HEAD:lib/main.dart']),
           equals(kFormattedDart.trim()));
 
       // Nothing is staged
-      expect(await execGit(['status'], workingDirectory: dir),
+      expect(await project.execGit(['status']),
           contains('nothing added to commit'));
 
       // File is pretty, and has been edited
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kFormattedDart));
+      expect(await project.readFile('lib/main.dart'), equals(kFormattedDart));
     });
 
     test('runs chunked tasks when necessary', () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
       // Stage two files
-      await writeFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
-      await writeFile('lib/foo.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/foo.dart'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
+      await project.writeFile('lib/foo.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/foo.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
       // Set maxArgLength low enough so that chunking is used
-      await gitCommit(maxArgLength: 10, workingDirectory: dir);
+      await project.gitCommit(maxArgLength: 10);
 
       // Nothing was wrong so the empty commit is created
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('2'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('2'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kFormattedDart));
-      expect(await readFile('lib/foo.dart', workingDirectory: dir),
-          equals(kFormattedDart));
+      expect(await project.readFile('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.readFile('lib/foo.dart'), equals(kFormattedDart));
     });
 
     test('fails when backup stash is missing', () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
       final config = '''lint_staged:
   .dart: git stash drop
 ''';
-      await writeFile('pubspec.yaml', config, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', config);
 
       // Stage two files
-      await writeFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
       // Set maxArgLength low enough so that chunking is used
-      final commit = gitCommit(maxArgLength: 10, workingDirectory: dir);
+      final commit = project.gitCommit(maxArgLength: 10);
 
       expect(commit, throwsException);
     });
 
     test('works when a branch named stash exists', () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
       // create a new branch called stash
-      await execGit(['branch', 'stash'], workingDirectory: dir);
+      await project.execGit(['branch', 'stash']);
 
       // Stage two files
-      await writeFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted file
-      await gitCommit(workingDirectory: dir);
+      await project.gitCommit();
 
       // Nothing is wrong, so a new commit is created and file is pretty
       expect(
-          await execGit(['rev-list', '--count', 'HEAD'], workingDirectory: dir),
-          equals('2'));
-      expect(await execGit(['log', '-1', '--pretty=%B'], workingDirectory: dir),
+          await project.execGit(['rev-list', '--count', 'HEAD']), equals('2'));
+      expect(await project.execGit(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: dir),
-          equals(kFormattedDart));
+      expect(await project.readFile('lib/main.dart'), equals(kFormattedDart));
     });
   });
 }

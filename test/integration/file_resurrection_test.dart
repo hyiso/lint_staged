@@ -1,8 +1,3 @@
-import 'dart:io';
-
-import 'package:lint_staged/src/file.dart';
-import 'package:lint_staged/src/git.dart';
-import 'package:path/path.dart';
 import 'package:test/test.dart';
 
 import '__fixtures__/config.dart';
@@ -13,90 +8,88 @@ void main() {
   group('lint_staged', () {
     test('does not resurrect removed files due to git bug when tasks pass',
         () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
-      await removeFile('README.md',
-          workingDirectory: dir); // Remove file from previous commit
-      await writeFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.removeFile('README.md'); // Remove file from previous commit
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
 
-      await gitCommit(workingDirectory: dir);
+      await project.gitCommit();
 
-      expect(await File(join(dir, 'README.md')).exists(), isFalse);
+      expect(await project.existsFile('README.md'), isFalse);
     });
 
     test('does not resurrect removed files in complex case', () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
       // Add file to index, and remove it from disk
-      await writeFile('lib/main.dart', kFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
-      await removeFile('lib/main.dart', workingDirectory: dir);
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
+      await project.removeFile('lib/main.dart');
 
       // Rename file in index, and remove it from disk
-      final readme = await readFile('README.md', workingDirectory: dir);
-      await removeFile('README.md', workingDirectory: dir);
-      await execGit(['add', 'README.md'], workingDirectory: dir);
-      await writeFile('README_NEW.md', readme!, workingDirectory: dir);
-      await execGit(['add', 'README_NEW.md'], workingDirectory: dir);
-      await removeFile('README_NEW.md', workingDirectory: dir);
+      final readme = await project.readFile('README.md');
+      await project.removeFile('README.md');
+      await project.execGit(['add', 'README.md']);
+      await project.writeFile('README_NEW.md', readme!);
+      await project.execGit(['add', 'README_NEW.md']);
+      await project.removeFile('README_NEW.md');
 
       expect(
-          await execGit(['status', '--porcelain'], workingDirectory: dir),
+          await project.execGit(['status', '--porcelain']),
           contains('RD README.md -> README_NEW.md\n'
               'AD lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      await gitCommit(workingDirectory: dir);
+      await project.gitCommit();
 
       expect(
-          await execGit(['status', '--porcelain'], workingDirectory: dir),
+          await project.execGit(['status', '--porcelain']),
           contains(' D README_NEW.md\n'
               ' D lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      expect(await File(join(dir, 'lib/main.dart')).exists(), isFalse);
-      expect(await File(join(dir, 'README_NEW.md')).exists(), isFalse);
+      expect(await project.existsFile('lib/main.dart'), isFalse);
+      expect(await project.existsFile('README_NEW.md'), isFalse);
     });
 
     test('does not resurrect removed files due to git bug when tasks fail',
         () async {
-      final dir = tmp();
-      print('dir: $dir');
-      await setupGit(dir);
+      final project = IntegrationProject();
+      print('dir: ${project.dir}');
+      await project.setup();
 
-      await writeFile('pubspec.yaml', kConfigFormatExit, workingDirectory: dir);
+      await project.writeFile('pubspec.yaml', kConfigFormatExit);
 
-      await removeFile('README.md',
-          workingDirectory: dir); // Remove file from previous commit
-      await writeFile('lib/main.dart', kUnFormattedDart, workingDirectory: dir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: dir);
+      await project.removeFile('README.md'); // Remove file from previous commit
+      await project.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.execGit(['add', 'lib/main.dart']);
 
       expect(
-          await execGit(['status', '--porcelain'], workingDirectory: dir),
+          await project.execGit(['status', '--porcelain']),
           contains(' D README.md\n'
               'A  lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      final commit = gitCommit(workingDirectory: dir, allowEmpty: true);
+      final commit = project.gitCommit(allowEmpty: true);
 
       await expectLater(commit, throwsException);
 
       expect(
-          await execGit(['status', '--porcelain'], workingDirectory: dir),
+          await project.execGit(['status', '--porcelain']),
           contains(' D README.md\n'
               'A  lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      expect(await File(join(dir, 'README.md')).exists(), isFalse);
+      expect(await project.existsFile('README.md'), isFalse);
     });
   });
 }
