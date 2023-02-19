@@ -2,9 +2,3 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 dart bin/lint_staged.dart
-
-dart format --output=none --set-exit-if-changed .
-
-dart analyze
-
-dart test

@@ -187,9 +187,7 @@ void main() {
 
       // Run lint_staged to automatically format the file and commit formatted files
       // Set maxArgLength low enough so that chunking is used
-      final commit = project.gitCommit(maxArgLength: 10);
-
-      expect(commit, throwsException);
+      expect(project.gitCommit(maxArgLength: 10), throwsException);
     });
 
     test('works when a branch named stash exists', () async {

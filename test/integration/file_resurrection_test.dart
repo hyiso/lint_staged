@@ -79,9 +79,7 @@ void main() {
               'A  lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      final commit = project.gitCommit(allowEmpty: true);
-
-      await expectLater(commit, throwsException);
+      await expectLater(project.gitCommit(allowEmpty: true), throwsException);
 
       expect(
           await project.execGit(['status', '--porcelain']),
