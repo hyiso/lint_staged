@@ -57,7 +57,7 @@ void main() {
           workingDirectory: submoduleDir);
       await execGit(['add', 'lib/main.dart'], workingDirectory: submoduleDir);
 
-      // Run lint-staged with `prettier --list-different` and commit pretty file
+      // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
       await project.gitCommit(workingDirectory: submoduleDir);
 
       // Nothing is wrong, so a new commit is created

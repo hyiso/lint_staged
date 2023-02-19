@@ -21,7 +21,7 @@ void main() {
       await project.appendFile('README.md', '\n## Edited\n');
       await project.appendFile('lib/main.dart', kFormattedDart);
 
-      // Run lint-staged with `prettier --list-different` and commit pretty file
+      // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
       await project.gitCommit(gitCommitArgs: ['--amend', '--no-edit']);
 
       // Nothing is wrong, so the commit was amended

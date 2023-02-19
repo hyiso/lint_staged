@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:lint_staged/lint_staged.dart';
+import 'package:lint_staged/src/logger.dart' as logger;
 
 void main(List<String> arguments) async {
   final argParser = ArgParser()
@@ -22,6 +23,7 @@ void main(List<String> arguments) async {
   final diff = argResults['diff'];
   final diffFilter = argResults['diff-filter'];
   final stash = argResults['stash'] == true;
+  logger.debug = false;
   try {
     final passed = await lintStaged(
       allowEmpty: allowEmpty,

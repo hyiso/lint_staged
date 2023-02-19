@@ -55,7 +55,7 @@ void main() {
               '>>>>>>> branch-b\n'
               ''));
 
-      // Fix conflict and commit using lint-staged
+      // Fix conflict and commit using lint_staged
       await project.writeFile('lib/main.dart', fileInBranchB);
       expect(await project.readFile('lib/main.dart'), equals(fileInBranchB));
       await project.execGit(['add', '.']);
@@ -122,7 +122,7 @@ void main() {
               '>>>>>>> branch-b\n'
               ''));
 
-      // Fix conflict and commit using lint-staged
+      // Fix conflict and commit using lint_staged
       await project.writeFile('lib/main.dart', fileInBranchB);
       expect(await project.readFile('lib/main.dart'), equals(fileInBranchB));
       await project.execGit(['add', '.']);

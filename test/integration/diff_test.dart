@@ -46,7 +46,7 @@ void main() {
       await project.writeFile('lib/main.dart', kUnFormattedDart);
       await project.execGit(['add', '.']);
 
-      // Run lint-staged with `--diff-filter=D` to include only deleted files.
+      // Run lint_staged with `--diff-filter=D` to include only deleted files.
       final passed = await lintStaged(
         diffFilter: 'D',
         stash: false,
