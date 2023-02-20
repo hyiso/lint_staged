@@ -14,7 +14,6 @@ class IntegrationProject {
   Future<void> setup({bool initialCommit = true}) async {
     /// Git init
     await git.execGit(['init', dir]);
-    await git.execGit(['branch', '-M', 'main']);
 
     /// Git config
     await execGit(['config', 'user.name', 'test']);

@@ -10,6 +10,9 @@ void main() {
       print('dir: ${project.dir}');
       await project.setup();
 
+      final defaultBranch =
+          await project.execGit(['rev-parse', '--abbrev-ref', 'HEAD']);
+
       final fileInBranchA = 'String foo = "foo";\n';
       final fileInBranchB = 'String foo="bar";\n';
       final fileInBranchBFixed = 'String foo = "bar";\n';
@@ -24,7 +27,7 @@ void main() {
 
       expect(await project.readFile('lib/main.dart'), equals(fileInBranchA));
 
-      await project.execGit(['checkout', 'main']);
+      await project.execGit(['checkout', defaultBranch]);
 
       // Create another branch
       await project.execGit(['checkout', '-b', 'branch-b']);
@@ -36,7 +39,7 @@ void main() {
           await project.readFile('lib/main.dart'), equals(fileInBranchBFixed));
 
       // Merge first branch
-      await project.execGit(['checkout', 'main']);
+      await project.execGit(['checkout', defaultBranch]);
       await project.execGit(['merge', 'branch-a']);
       expect(await project.readFile('lib/main.dart'), equals(fileInBranchA));
       expect(await project.execGit(['log', '-1', '--pretty=%B']),
@@ -77,6 +80,9 @@ void main() {
       print('dir: ${project.dir}');
       await project.setup();
 
+      final defaultBranch =
+          await project.execGit(['rev-parse', '--abbrev-ref', 'HEAD']);
+
       final fileInBranchA = 'String foo = "foo";\n';
       final fileInBranchB = 'String foo="bar";\n';
       final fileInBranchBFixed = 'String foo = "bar";\n';
@@ -91,7 +97,7 @@ void main() {
 
       expect(await project.readFile('lib/main.dart'), equals(fileInBranchA));
 
-      await project.execGit(['checkout', 'main']);
+      await project.execGit(['checkout', defaultBranch]);
 
       // Create another branch
       await project.execGit(['checkout', '-b', 'branch-b']);
@@ -103,7 +109,7 @@ void main() {
           await project.readFile('lib/main.dart'), equals(fileInBranchBFixed));
 
       // Merge first branch
-      await project.execGit(['checkout', 'main']);
+      await project.execGit(['checkout', defaultBranch]);
       await project.execGit(['merge', 'branch-a']);
       expect(await project.readFile('lib/main.dart'), equals(fileInBranchA));
       expect(await project.execGit(['log', '-1', '--pretty=%B']),
