@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Fix loadConfig
+
 ## 0.1.1
 
 - Change minSdkVersion to 2.12.0
