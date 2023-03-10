@@ -41,23 +41,19 @@ Future<LintStagedContext> runAll({
   if (!ctx.shouldBackup) {
     logger.trace(skippingBackupMsg(hasInitialCommit, diff));
   }
-  final files = await getStagedFiles(
+  final stagedFiles = await getStagedFiles(
     diff: diff,
     diffFilter: diffFilter,
     workingDirectory: workingDirectory,
   );
-  if (files == null) {
+  if (stagedFiles == null) {
     ctx.output.add(kGetStagedFilesErrorMsg);
     ctx.errors.add(kGetStagedFilesError);
     throw createError(ctx, kNoStagedFilesMsg);
   }
-  if (files.isEmpty) {
+  if (stagedFiles.isEmpty) {
     ctx.output.add(kNoStagedFilesMsg);
     return ctx;
-  }
-  final stagedFileChunks = chunkFiles(files, maxArgLength: maxArgLength);
-  if (stagedFileChunks.length > 1) {
-    logger.stdout('Chunked staged files into ${stagedFileChunks.length} part');
   }
 
   final foundConfigs = await loadConifg(workingDirectory: workingDirectory);
@@ -70,7 +66,8 @@ Future<LintStagedContext> runAll({
     return ctx;
   }
 
-  final matchedFiles = files.where((file) => file.endsWith('.dart')).toList();
+  final matchedFiles =
+      stagedFiles.where((file) => file.endsWith('.dart')).toList();
   final runner = ListRunner(
       ctx: ctx,
       matchedFiles: matchedFiles,

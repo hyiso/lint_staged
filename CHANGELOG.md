@@ -1,3 +1,7 @@
+## 0.1.3
+
+- Support `<file>` placholder in script, so script can run on parent directory. 
+
 ## 0.1.2
 
 - Fix loadConfig
