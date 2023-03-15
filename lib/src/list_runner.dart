@@ -1,10 +1,11 @@
 import 'dart:collection';
 import 'dart:io';
 
-import 'package:lint_staged/src/context.dart';
-import 'package:lint_staged/src/symbols.dart';
-
+import 'context.dart';
 import 'logger.dart';
+import 'symbols.dart';
+
+final logger = Logger('lint_staged:ListRunner');
 
 ///
 /// `dart fix` for single file is supportted in Dart SDK 2.18
@@ -51,7 +52,7 @@ class ListRunner {
         } else {
           cmds.add(path);
         }
-        logger.trace(cmds.join(' '));
+        logger.debug(cmds.join(' '));
         final result = await Process.run(cmds.removeAt(0), cmds,
             workingDirectory: workingDirectory);
         if (result.exitCode != 0) {

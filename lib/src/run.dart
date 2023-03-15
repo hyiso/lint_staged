@@ -1,16 +1,17 @@
 import 'dart:io';
 
-import 'package:lint_staged/src/config.dart';
-import 'package:lint_staged/src/exception.dart';
-import 'package:lint_staged/src/list_runner.dart';
-
 import 'chunk.dart';
+import 'config.dart';
+import 'exception.dart';
 import 'git.dart';
 import 'git_workflow.dart';
+import 'list_runner.dart';
 import 'logger.dart';
 import 'message.dart';
 import 'context.dart';
 import 'symbols.dart';
+
+final logger = Logger('lint_staged:run');
 
 Future<LintStagedContext> runAll({
   bool allowEmpty = false,
@@ -39,7 +40,7 @@ Future<LintStagedContext> runAll({
   /// and when using the default list of staged files by default
   ctx.shouldBackup = hasInitialCommit && stash;
   if (!ctx.shouldBackup) {
-    logger.trace(skippingBackupMsg(hasInitialCommit, diff));
+    logger.debug(skippingBackupMsg(hasInitialCommit, diff));
   }
   final stagedFiles = await getStagedFiles(
     diff: diff,

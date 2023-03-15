@@ -1,10 +1,8 @@
-import 'package:cli_util/cli_logging.dart';
-import 'package:lint_staged/src/message.dart';
-
+import 'src/context.dart';
 import 'src/exception.dart';
 import 'src/logger.dart';
+import 'src/message.dart';
 import 'src/run.dart';
-import 'src/context.dart';
 import 'src/symbols.dart';
 
 ///
@@ -23,6 +21,7 @@ Future<bool> lintStaged({
   String? workingDirectory,
   int maxArgLength = 0,
 }) async {
+  final logger = Logger('lint_staged');
   try {
     final ctx = await runAll(
         allowEmpty: allowEmpty,
@@ -37,15 +36,15 @@ Future<bool> lintStaged({
   } catch (e) {
     if (e is LintStagedException && e.ctx.errors.isNotEmpty) {
       if (e.ctx.errors.contains(kConfigNotFoundError)) {
-        logger.trace(kNoConfigurationMsg);
+        logger.debug(kNoConfigurationMsg);
       } else if (e.ctx.errors.contains(kApplyEmptyCommitError)) {
-        logger.trace(kPreventedEmptyCommitMsg);
+        logger.debug(kPreventedEmptyCommitMsg);
       } else if (e.ctx.errors.contains(kGitError) &&
           !e.ctx.errors.contains(kGetBackupStashError)) {
-        logger.trace(kGitErrorMsg);
+        logger.debug(kGitErrorMsg);
         if (e.ctx.shouldBackup) {
           // No sense to show this if the backup stash itself is missing.
-          logger.trace(kRestoreStashExampleMsg);
+          logger.debug(kRestoreStashExampleMsg);
         }
       }
 

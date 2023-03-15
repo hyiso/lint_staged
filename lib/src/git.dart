@@ -1,7 +1,9 @@
 import 'dart:io';
 
-import 'package:lint_staged/src/logger.dart';
+import 'logger.dart';
 import 'package:path/path.dart';
+
+final logger = Logger('lint_staged:git');
 
 ///
 /// Get git diff arguments
@@ -43,7 +45,7 @@ Future<String> execGit(
   String? workingDirectory,
 }) async {
   final gitArgs = [...kNoSubmoduleRecurse, ...args];
-  logger.trace('git ${gitArgs.join(' ')}');
+  logger.debug('git ${gitArgs.join(' ')}');
   final result =
       await Process.run('git', gitArgs, workingDirectory: workingDirectory);
   if (result.exitCode != 0) {
