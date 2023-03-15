@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:lint_staged/src/context.dart';
@@ -29,7 +30,6 @@ class ListRunner {
   });
 
   Future<void> run() async {
-    final resolvedPaths = <String, Set<String>>{};
     await Future.wait(scripts.map((script) async {
       final args = script.split(' ');
       int index = args.length;
@@ -39,19 +39,17 @@ class ListRunner {
           break;
         }
       }
-      for (var file in matchedFiles) {
+      var paths = matchedFiles;
+      bool hasPlaceholderArg = index != args.length;
+      if (hasPlaceholderArg) {
+        paths = shrink(args[index], matchedFiles);
+      }
+      for (var path in paths) {
         final cmds = [...args];
-        if (index != args.length) {
-          final path =
-              resolvePath(args[index].replaceFirst(_kFilePlaceholder, file));
-          if (resolvedPaths[script] == null ||
-              !resolvedPaths[script]!.contains(path)) {
-            cmds[index] = path;
-          } else {
-            continue;
-          }
+        if (hasPlaceholderArg) {
+          cmds[index] = path;
         } else {
-          cmds.add(file);
+          cmds.add(path);
         }
         logger.trace(cmds.join(' '));
         final result = await Process.run(cmds.removeAt(0), cmds,
@@ -64,18 +62,70 @@ class ListRunner {
   }
 }
 
-String resolvePath(String path) {
-  final parts = path.split(Platform.pathSeparator);
-  final stack = <String>[];
-  for (var part in parts) {
-    if (part == '.') {
-      continue;
+/// shrink files paths.
+List<String> shrink(String placeholderArg, List<String> files) {
+  /// resolve path string to parts
+  List<String> resolve(String path) {
+    final parts = path.split(Platform.pathSeparator);
+    final stack = <String>[];
+    for (var part in parts) {
+      if (part == '.') {
+        continue;
+      }
+      if (part == '..') {
+        stack.removeLast();
+        continue;
+      }
+      stack.add(part);
     }
-    if (part == '..') {
-      stack.removeLast();
-      continue;
-    }
-    stack.add(part);
+    return stack;
   }
-  return stack.join(Platform.pathSeparator);
+
+  /// traverse TreeNode
+  List<String> traverse(TreeNode node) {
+    if (node.children.isEmpty) {
+      return [''];
+    }
+    final paths = <String>{};
+    for (var entry in node.children.entries) {
+      final dirs = [entry.key];
+      final subs = traverse(entry.value);
+      for (var sub in subs) {
+        paths.add([...dirs, sub].join(Platform.pathSeparator));
+      }
+    }
+    return paths.toList();
+  }
+
+  final root = TreeNode.root();
+  for (var file in files) {
+    final parts = resolve(placeholderArg.replaceFirst(_kFilePlaceholder, file));
+    if (parts.isEmpty) continue;
+    TreeNode parent = root;
+    while (parts.isNotEmpty) {
+      final dir = parts.removeAt(0);
+      if (dir.isEmpty) {
+        parent.children = Map.unmodifiable({});
+        break;
+      }
+      if (parent.children is UnmodifiableMapBase ||
+          parent.children is UnmodifiableMapView) break;
+      if (parent.children[dir] == null) {
+        parent.children[dir] = TreeNode(dir: dir, parent: parent);
+      }
+      parent = parent.children[dir]!;
+    }
+  }
+  return traverse(root);
+}
+
+class TreeNode {
+  final String dir;
+  TreeNode? parent;
+  Map<String, TreeNode> children = {};
+
+  TreeNode({required this.dir, this.parent})
+      : assert(dir.isNotEmpty, 'dir must not be empty');
+
+  TreeNode.root() : dir = '';
 }

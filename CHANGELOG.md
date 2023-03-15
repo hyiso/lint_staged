@@ -1,3 +1,7 @@
+## 0.1.4
+
+- Shrink reduant running when script contains `<file>` placholder. 
+
 ## 0.1.3
 
 - Support `<file>` placholder in script, so script can run on parent directory. 
