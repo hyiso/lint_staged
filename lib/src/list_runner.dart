@@ -116,6 +116,9 @@ List<String> shrink(String placeholderArg, List<String> files) {
       parent = parent.children[dir]!;
     }
   }
+  if (root.children.isEmpty) {
+    return [];
+  }
   return traverse(root);
 }
 

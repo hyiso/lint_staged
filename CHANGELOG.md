@@ -1,6 +1,10 @@
+## 0.1.5
+
+- Fix no `.dart` file staged when script containing `<file>` placholder. 
+
 ## 0.1.4
 
-- Shrink reduant running when script contains `<file>` placholder. 
+- Shrink reduant running when script containing `<file>` placholder. 
 
 ## 0.1.3
 
