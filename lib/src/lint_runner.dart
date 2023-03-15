@@ -5,7 +5,7 @@ import 'context.dart';
 import 'logger.dart';
 import 'symbols.dart';
 
-final logger = Logger('lint_staged:ListRunner');
+final logger = Logger('lint_staged:LintRunner');
 
 ///
 /// `dart fix` for single file is supportted in Dart SDK 2.18
@@ -17,14 +17,16 @@ final logger = Logger('lint_staged:ListRunner');
 ///
 const _kFilePlaceholder = '<file>';
 
-class ListRunner {
-  List<String> matchedFiles;
-  List<String> scripts;
-  String? workingDirectory;
-  LintStagedContext ctx;
+class LintRunner {
+  final String pattern;
+  final List<String> fileList;
+  final List<String> scripts;
+  final LintStagedContext ctx;
+  final String? workingDirectory;
 
-  ListRunner({
-    required this.matchedFiles,
+  LintRunner({
+    required this.pattern,
+    required this.fileList,
     required this.scripts,
     required this.ctx,
     this.workingDirectory,
@@ -40,10 +42,10 @@ class ListRunner {
           break;
         }
       }
-      var paths = matchedFiles;
+      var paths = fileList;
       bool hasPlaceholderArg = index != args.length;
       if (hasPlaceholderArg) {
-        paths = shrink(args[index], matchedFiles);
+        paths = shrink(args[index], fileList);
       }
       for (var path in paths) {
         final cmds = [...args];
@@ -57,6 +59,8 @@ class ListRunner {
             workingDirectory: workingDirectory);
         if (result.exitCode != 0) {
           ctx.errors.add(kTaskError);
+          logger.debug(result.stdout);
+          logger.debug(result.stderr);
         }
       }
     }));

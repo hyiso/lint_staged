@@ -3,7 +3,7 @@ import 'dart:io';
 import 'logger.dart';
 import 'package:path/path.dart';
 
-final logger = Logger('lint_staged:git');
+final logger = Logger('lint_staged:execGit');
 
 ///
 /// Get git diff arguments
