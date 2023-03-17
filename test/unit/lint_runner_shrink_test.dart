@@ -1,4 +1,4 @@
-import 'package:lint_staged/src/list_runner.dart';
+import 'package:lint_staged/src/lint_runner.dart';
 import 'package:test/test.dart';
 
 void main() {

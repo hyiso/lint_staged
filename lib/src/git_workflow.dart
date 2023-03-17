@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math';
 import 'package:lint_staged/src/logger.dart';
 import 'package:lint_staged/src/symbols.dart';
@@ -40,7 +39,7 @@ const kMergeHead = 'MERGE_HEAD';
 const kMergeMode = 'MERGE_MODE';
 const kMergeMsg = 'MERGE_MSG';
 
-const kPatchUnstaged = 'lint_staged_unstaged.path';
+const kPatchUnstaged = 'lint_staged_unstaged.patch';
 
 const kGitDiffArgs = [
   '--binary', // support binary files
@@ -114,16 +113,7 @@ class GitWorkflow {
       ctx.errors.add(kGetBackupStashError);
       throw Exception('lint_staged automatic backup is missing!');
     }
-
-    /// https://github.com/okonet/lint_staged/issues/1121
-    /// Detect MSYS in login shell mode and escape braces
-    /// to prevent interpolation
-    if (Platform.environment['MSYSTEM']?.isNotEmpty == true &&
-        Platform.environment['LOGINSHELL']?.isNotEmpty == true) {
-      return 'refs/stash@\\{$index\\}';
-    }
-
-    return 'refs/stash@{$index}';
+    return index.toString();
   }
 
   ///
@@ -189,6 +179,7 @@ class GitWorkflow {
   /// both the "from" and "to" filenames, where "from" is no longer on disk.
   ///
   Future<List<String>> getPartiallyStagedFiles() async {
+    logger.debug('Getting partially staged files...');
     final status =
         await execGit(['status', '-z'], workingDirectory: workingDirectory);
     if (status.isEmpty) {
@@ -204,7 +195,7 @@ class GitWorkflow {
     /// renamed file, the file names are separated by a NUL character
     /// (e.g. `to`\0`from`)
     ///
-    return status
+    final partiallyStaged = status
         .split(RegExp(r'\x00(?=[ AMDRCU?!]{2} |$)'))
         .where((line) {
           if (line.length > 2) {
@@ -224,6 +215,8 @@ class GitWorkflow {
 
         /// Filter empty string
         .toList();
+    logger.debug('Found partially staged files: $partiallyStaged');
+    return partiallyStaged;
   }
 
   ///

@@ -177,7 +177,7 @@ void main() {
       print('dir: ${project.dir}');
       await project.setup();
       final config = '''lint_staged:
-  .dart: git stash drop
+  'lib/**.dart': git stash drop
 ''';
       await project.writeFile('pubspec.yaml', config);
 

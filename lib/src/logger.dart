@@ -1,4 +1,5 @@
 import 'dart:io' as io;
+import 'package:chalk/chalk.dart';
 
 class Logger {
   final String name;
@@ -6,7 +7,7 @@ class Logger {
   Logger(this.name) : isDebug = io.Platform.environment['DEBUG'] == 'true';
 
   void stderr(String message) {
-    io.stderr.writeln('$name $message');
+    io.stderr.writeln(chalk.red('$name $message'));
   }
 
   void stdout(String message) {

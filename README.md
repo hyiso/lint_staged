@@ -23,13 +23,13 @@ To install *lint_staged* in the recommended way, you need to:
 1. Install *lint_staged* itself:
    - `dart pub add --dev lint_staged`
 1. Set up the `pre-commit` git hook to run *lint_staged*
-   - [Husky](https://github.com/hyiso/husky) is a popular choice for configuring git hooks
+   - [Husky](https://github.com/hyiso/husky) is a recommended choice for configuring git hooks
    - Read more about git hooks [here](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
 1. Configure *lint_staged* to run linters and other tasks:
-   - for example add following in `pubspec.yaml`: 
+   - for example, add following in `pubspec.yaml`: 
    ```yaml
    lint_staged:
-     .dart: dart format --fix && dart fix --apply
+     'lib/**.dart': dart format --fix && dart fix --apply
    ```
    to automatically format & fix all staged dart files.
    - See [Configuration](#Configuration) for more info
@@ -65,30 +65,100 @@ Options:
 
 ## Configuration
 
-*Lint_staged* can be configured in ways:
-
-- `lint_staged` map in your `pubspec.yaml`
+*Lint_staged* must be configured in your `pubspec.yaml`
 
 #### `pubspec.yaml` example:
 
 ```yaml
-lint_staged":
-  ".dart": "your-cmd"
+lint_staged:
+  'lib/**.dart': your-cmd
 ```
 
-This config will execute `your-cmd` with the list of currently staged files passed as arguments.
+This config will execute `your-cmd` with staged dart files passed as arguments.
 
-So, considering you did `git add file1.ext file2.ext`, lint_staged will run the following command:
+## Filtering files
 
-`your-cmd file1.ext file2.ext`
+Linter commands work on a subset of all staged files, defined by a _glob pattern_. lint_staged uses [glob](https://github.com/dart-lang/glob) for matching files with the following [syntax](https://github.com/dart-lang/glob/blob/master/README.md#syntax):
+### Match any characters in a filename: `*`
+
+The `*` character matches zero or more of any character other than `/`. This
+means that it can be used to match all files in a given directory that match a
+pattern without also matching files in a subdirectory. For example, `lib/*.dart`
+will match `lib/glob.dart` but not `lib/src/utils.dart`.
+
+### Match any characters across directories: `**`
+
+`**` is like `*`, but matches `/` as well. It's useful for matching files or
+listing directories recursively. For example, `lib/**.dart` will match both
+`lib/glob.dart` and `lib/src/utils.dart`.
+
+If `**` appears at the beginning of a glob, it won't match absolute paths or
+paths beginning with `../`. For example, `**.dart` won't match `/foo.dart`,
+although `/**.dart` will. This is to ensure that listing a bunch of paths and
+checking whether they match a glob produces the same results as listing that
+glob. In the previous example, `/foo.dart` wouldn't be listed for `**.dart`, so
+it shouldn't be matched by it either.
+
+This is an extension to Bash glob syntax that's widely supported by other glob
+implementations.
+
+### Match any single character: `?`
+
+The `?` character matches a single character other than `/`. Unlike `*`, it
+won't match any more or fewer than one character. For example, `test?.dart` will
+match `test1.dart` but not `test10.dart` or `test.dart`.
+
+### Match a range of characters: `[...]`
+
+The `[...]` construction matches one of several characters. It can contain
+individual characters, such as `[abc]`, in which case it will match any of those
+characters; it can contain ranges, such as `[a-zA-Z]`, in which case it will
+match any characters that fall within the range; or it can contain a mix of
+both. It will only ever match a single character. For example,
+`test[a-zA-Z_].dart` will match `testx.dart`, `testA.dart`, and `test_.dart`,
+but not `test-.dart`.
+
+If it starts with `^` or `!`, the construction will instead match all characters
+_not_ mentioned. For example, `test[^a-z].dart` will match `test1.dart` but not
+`testa.dart`.
+
+This construction never matches `/`.
+
+### Match one of several possibilities: `{...,...}`
+
+The `{...,...}` construction matches one of several options, each of which is a
+glob itself. For example, `lib/{*.dart,src/*}` matches `lib/glob.dart` and
+`lib/src/data.txt`. It can contain any number of options greater than one, and
+can even contain nested options.
+
+This is an extension to Bash glob syntax, although it is supported by other
+layers of Bash and is often used in conjunction with globs.
+
+### Escaping a character: `\`
+
+The `\` character can be used in any context to escape a character that would
+otherwise be semantically meaningful. For example, `\*.dart` matches `*.dart`
+but not `test.dart`.
+
+### Syntax errors
+
+Because they're used as part of the shell, almost all strings are valid Bash
+globs. This implementation is more picky, and performs some validation to ensure
+that globs are meaningful. For instance, unclosed `{` and `[` are disallowed.
+
+### Reserved syntax: `(...)`
+
+Parentheses are reserved in case this package adds support for Bash extended
+globbing in the future. For the time being, using them will throw an error
+unless they're escaped.
 
 ## What commands are supported?
 
-Supported are any executables installed locally or globally via `dart` as well as any executable from your \$PATH.
+Supported are any executables installed locally or globally via `pub` as well as any executable from your \$PATH.
 
 > Using globally installed scripts is discouraged, since lint_staged may not work for someone who doesn't have it installed.
 
-`lint_staged` uses Process.run to locate locally installed scripts.
+`lint_staged` uses `Process.run` to locate locally installed scripts.
 
 Pass arguments to your commands separated by space as you would do in the shell. See [examples](#examples) below.
 
@@ -100,10 +170,10 @@ For example:
 
 ```yaml
 lint_staged:
-  .dart: dart format --fix && dart fix --apply
+  'lib/**.dart': dart format --fix && dart fix --apply
 ```
 
-going to execute `dart format --fix` and if it exits with `0` code, it will execute `dart fix --apply` on all staged `.dart` files.
+going to execute `dart format --fix` and if it exits with `0` code, it will execute `dart fix --apply` on all staged dart files.
 
 ## Examples
 
@@ -131,7 +201,7 @@ _Note: we don't pass a path as an argument for the runners. This is important si
 
 ```yaml
 lint_staged:
-  .dart: dart fix --apply
+  'lib/**.dart': dart fix --apply
 ```
 
 </details>
@@ -143,7 +213,7 @@ lint_staged:
 
 ```yaml
 lint_staged:
-  .dart: dart format --fix
+  'lib/**.dart': dart format --fix
 ```
 
 This will run `dart format --fix` and automatically add changes to the commit.

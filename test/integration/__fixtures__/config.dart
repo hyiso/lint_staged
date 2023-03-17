@@ -1,7 +1,7 @@
 const kConfigFormatFix = '''lint_staged:
-  .dart: dart format --fix
+  'lib/**.dart': dart format --fix
 ''';
 
 const kConfigFormatExit = '''lint_staged:
-  .dart: dart format --set-exit-if-changed
+  'lib/**.dart': dart format --set-exit-if-changed
 ''';

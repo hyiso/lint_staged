@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:glob/glob.dart';
+
 import 'chunk.dart';
 import 'config.dart';
 import 'exception.dart';
 import 'git.dart';
 import 'git_workflow.dart';
-import 'list_runner.dart';
+import 'lint_runner.dart';
 import 'logger.dart';
 import 'message.dart';
 import 'context.dart';
@@ -56,6 +58,7 @@ Future<LintStagedContext> runAll({
     ctx.output.add(kNoStagedFilesMsg);
     return ctx;
   }
+  logger.debug('Loaded list of staged files int git:\n$stagedFiles');
 
   final foundConfigs = await loadConifg(workingDirectory: workingDirectory);
   if (foundConfigs == null) {
@@ -66,16 +69,32 @@ Future<LintStagedContext> runAll({
     ctx.errors.add(kConfigEmptyError);
     return ctx;
   }
-
-  final matchedFiles =
-      stagedFiles.where((file) => file.endsWith('.dart')).toList();
-  final runner = ListRunner(
-      ctx: ctx,
-      matchedFiles: matchedFiles,
-      scripts: foundConfigs['.dart'] ?? [],
-      workingDirectory: workingDirectory);
+  logger.debug('Found configs: $foundConfigs');
+  final matchedFiles = <String>{};
+  final tasks = <Future Function()>[];
+  for (var pattern in foundConfigs.keys) {
+    final glob = Glob(pattern);
+    final scopedFiles = <String>{};
+    for (var file in stagedFiles) {
+      logger.debug('$file matches $pattern is ${glob.matches(file)}');
+      if (glob.matches(file)) {
+        scopedFiles.add(file);
+        matchedFiles.add(file);
+      }
+    }
+    stagedFiles.removeWhere((file) => scopedFiles.contains(file));
+    final runner = LintRunner(
+        ctx: ctx,
+        pattern: pattern,
+        fileList: scopedFiles.toList(),
+        scripts: foundConfigs[pattern]!,
+        workingDirectory: workingDirectory);
+    tasks.add(runner.run);
+  }
+  logger.debug('matched files: $matchedFiles');
   final matchedFileChunks =
-      chunkFiles(matchedFiles, maxArgLength: maxArgLength);
+      chunkFiles(matchedFiles.toList(), maxArgLength: maxArgLength);
+  logger.debug('matched file chunks: $matchedFileChunks');
   final git = GitWorkflow(
     allowEmpty: allowEmpty,
     gitConfigDir: await getGitConfigDir(),
@@ -91,7 +110,7 @@ Future<LintStagedContext> runAll({
     await git.hideUnstagedChanges(ctx);
   }
   logger.stdout('Running tasks for staged files...');
-  await runner.run();
+  await Future.wait(tasks.map((task) => task()));
   if (!applyModifationsSkipped(ctx)) {
     logger.stdout('Applying modifications from tasks...');
     await git.applyModifications(ctx);
