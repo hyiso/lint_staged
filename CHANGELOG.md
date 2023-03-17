@@ -1,3 +1,10 @@
+## 0.2.0-dev.0
+
+> Note: This release has breaking changes.
+
+ - **BREAKING** **FEAT**: Use [glob](https://github.com/dart-lang/glob) to support pattern in config.
+ - **FEAT**: Support DEBUG=true in env to print verbose log. 
+
 ## 0.1.5
 
 - Fix no `.dart` file staged when script containing `<file>` placholder. 
