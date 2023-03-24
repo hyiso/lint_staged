@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:glob/glob.dart';
+import 'package:lint_staged/src/logger.dart';
+import 'package:verbose/verbose.dart';
 
 import 'chunk.dart';
 import 'config.dart';
@@ -8,12 +10,12 @@ import 'exception.dart';
 import 'git.dart';
 import 'git_workflow.dart';
 import 'lint_runner.dart';
-import 'logger.dart';
 import 'message.dart';
 import 'context.dart';
 import 'symbols.dart';
 
 final logger = Logger('lint_staged:run');
+final verbose = Verbose('lint_staged:run');
 
 Future<LintStagedContext> runAll({
   bool allowEmpty = false,
@@ -42,7 +44,7 @@ Future<LintStagedContext> runAll({
   /// and when using the default list of staged files by default
   ctx.shouldBackup = hasInitialCommit && stash;
   if (!ctx.shouldBackup) {
-    logger.debug(skippingBackupMsg(hasInitialCommit, diff));
+    verbose(skippingBackupMsg(hasInitialCommit, diff));
   }
   final stagedFiles = await getStagedFiles(
     diff: diff,
@@ -58,7 +60,7 @@ Future<LintStagedContext> runAll({
     ctx.output.add(kNoStagedFilesMsg);
     return ctx;
   }
-  logger.debug('Loaded list of staged files int git:\n$stagedFiles');
+  verbose('Loaded list of staged files int git:\n$stagedFiles');
 
   final foundConfigs = await loadConifg(workingDirectory: workingDirectory);
   if (foundConfigs == null) {
@@ -69,14 +71,14 @@ Future<LintStagedContext> runAll({
     ctx.errors.add(kConfigEmptyError);
     return ctx;
   }
-  logger.debug('Found configs: $foundConfigs');
+  verbose('Found configs: $foundConfigs');
   final matchedFiles = <String>{};
   final tasks = <Future Function()>[];
   for (var pattern in foundConfigs.keys) {
     final glob = Glob(pattern);
     final scopedFiles = <String>{};
     for (var file in stagedFiles) {
-      logger.debug('$file matches $pattern is ${glob.matches(file)}');
+      verbose('$file matches $pattern is ${glob.matches(file)}');
       if (glob.matches(file)) {
         scopedFiles.add(file);
         matchedFiles.add(file);
@@ -91,10 +93,10 @@ Future<LintStagedContext> runAll({
         workingDirectory: workingDirectory);
     tasks.add(runner.run);
   }
-  logger.debug('matched files: $matchedFiles');
+  verbose('matched files: $matchedFiles');
   final matchedFileChunks =
       chunkFiles(matchedFiles.toList(), maxArgLength: maxArgLength);
-  logger.debug('matched file chunks: $matchedFileChunks');
+  verbose('matched file chunks: $matchedFileChunks');
   final git = GitWorkflow(
     allowEmpty: allowEmpty,
     gitConfigDir: await getGitConfigDir(),

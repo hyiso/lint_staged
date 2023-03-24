@@ -1,11 +1,12 @@
 import 'dart:collection';
 import 'dart:io';
 
+import 'package:verbose/verbose.dart';
+
 import 'context.dart';
-import 'logger.dart';
 import 'symbols.dart';
 
-final logger = Logger('lint_staged:LintRunner');
+final verbose = Verbose('lint_staged:LintRunner');
 
 ///
 /// `dart fix` for single file is supportted in Dart SDK 2.18
@@ -54,13 +55,13 @@ class LintRunner {
         } else {
           cmds.add(path);
         }
-        logger.debug(cmds.join(' '));
+        verbose(cmds.join(' '));
         final result = await Process.run(cmds.removeAt(0), cmds,
             workingDirectory: workingDirectory);
         if (result.exitCode != 0) {
           ctx.errors.add(kTaskError);
-          logger.debug(result.stdout);
-          logger.debug(result.stderr);
+          verbose(result.stdout);
+          verbose(result.stderr);
         }
       }
     }));

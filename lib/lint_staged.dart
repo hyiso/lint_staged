@@ -1,3 +1,5 @@
+import 'package:verbose/verbose.dart';
+
 import 'src/context.dart';
 import 'src/exception.dart';
 import 'src/logger.dart';
@@ -34,17 +36,18 @@ Future<bool> lintStaged({
     return true;
     // ignore: empty_catches
   } catch (e) {
+    final verbose = Verbose('lint_staged');
     if (e is LintStagedException && e.ctx.errors.isNotEmpty) {
       if (e.ctx.errors.contains(kConfigNotFoundError)) {
-        logger.debug(kNoConfigurationMsg);
+        verbose(kNoConfigurationMsg);
       } else if (e.ctx.errors.contains(kApplyEmptyCommitError)) {
-        logger.debug(kPreventedEmptyCommitMsg);
+        verbose(kPreventedEmptyCommitMsg);
       } else if (e.ctx.errors.contains(kGitError) &&
           !e.ctx.errors.contains(kGetBackupStashError)) {
-        logger.debug(kGitErrorMsg);
+        verbose(kGitErrorMsg);
         if (e.ctx.shouldBackup) {
           // No sense to show this if the backup stash itself is missing.
-          logger.debug(kRestoreStashExampleMsg);
+          verbose(kRestoreStashExampleMsg);
         }
       }
 
