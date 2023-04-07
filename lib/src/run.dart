@@ -14,7 +14,6 @@ import 'message.dart';
 import 'context.dart';
 import 'symbols.dart';
 
-final logger = Logger('lint_staged:run');
 final verbose = Verbose('lint_staged:run');
 
 Future<LintStagedContext> runAll({
@@ -24,6 +23,7 @@ Future<LintStagedContext> runAll({
   bool stash = true,
   String? workingDirectory,
   int maxArgLength = 0,
+  required Logger logger,
 }) async {
   final ctx = getInitialContext();
   if (!FileSystemEntity.isDirectorySync('.git') &&
@@ -105,29 +105,36 @@ Future<LintStagedContext> runAll({
     matchedFileChunks: matchedFileChunks,
     workingDirectory: workingDirectory,
   );
-  logger.stdout('Preparing lint_staged...');
+  logger.progress('Preparing lint_staged...');
   await git.prepare(ctx);
+  logger.success('Preparing lint_staged...');
   if (ctx.hasPartiallyStagedFiles) {
-    logger.stdout('Hiding unstaged changes to partially staged files...');
+    logger.progress('Hiding unstaged changes to partially staged files...');
     await git.hideUnstagedChanges(ctx);
+    logger.success('Hiding unstaged changes to partially staged files...');
   }
-  logger.stdout('Running tasks for staged files...');
+  logger.progress('Running tasks for staged files...');
   await Future.wait(tasks.map((task) => task()));
+  logger.success('Running tasks for staged files...');
   if (!applyModifationsSkipped(ctx)) {
-    logger.stdout('Applying modifications from tasks...');
+    logger.progress('Applying modifications from tasks...');
     await git.applyModifications(ctx);
+    logger.success('Applying modifications from tasks...');
   }
   if (ctx.hasPartiallyStagedFiles && !restoreUnstagedChangesSkipped(ctx)) {
-    logger.stdout('Restoring unstaged changes to partially staged files...');
+    logger.progress('Restoring unstaged changes to partially staged files...');
     await git.resotreUnstagedChanges(ctx);
+    logger.success('Restoring unstaged changes to partially staged files...');
   }
   if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
-    logger.stdout('Reverting to original state because of errors...');
+    logger.progress('Reverting to original state because of errors...');
     await git.restoreOriginState(ctx);
+    logger.success('Reverting to original state because of errors...');
   }
   if (cleanupEnabled(ctx) && !cleanupSkipped(ctx)) {
-    logger.stdout('Cleaning up temporary files...');
+    logger.progress('Cleaning up temporary files...');
     await git.cleanup(ctx);
+    logger.success('Cleaning up temporary files...');
   }
   if (ctx.errors.isNotEmpty) {
     throw createError(ctx);

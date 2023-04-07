@@ -23,13 +23,14 @@ Future<bool> lintStaged({
   String? workingDirectory,
   int maxArgLength = 0,
 }) async {
-  final logger = Logger('lint_staged');
+  final logger = Logger();
   try {
     final ctx = await runAll(
         allowEmpty: allowEmpty,
         diff: diff,
         diffFilter: diffFilter,
         stash: stash,
+        logger: logger,
         maxArgLength: maxArgLength,
         workingDirectory: workingDirectory);
     _printTaskOutput(ctx, logger);
@@ -60,7 +61,7 @@ Future<bool> lintStaged({
 
 void _printTaskOutput(LintStagedContext ctx, Logger logger) {
   if (ctx.output.isEmpty) return;
-  final log = ctx.errors.isNotEmpty ? logger.stderr : logger.stdout;
+  final log = ctx.errors.isNotEmpty ? logger.error : logger.success;
   for (var line in ctx.output) {
     log(line);
   }

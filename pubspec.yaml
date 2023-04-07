@@ -10,8 +10,13 @@ environment:
 
 dependencies:
   ansi: ^0.2.2
+  ansi_escapes: ^1.1.0
+  ansi_slice: ^0.1.1
+  ansi_strip: ^0.1.1+1
+  ansi_wrap: ^0.1.2+1
   args: ^2.3.1
   glob: ^2.0.1
+  indent: ^2.0.0
   path: ^1.8.0
   verbose: ^0.1.0
   yaml: ^3.1.1
