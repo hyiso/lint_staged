@@ -5,12 +5,22 @@ import 'package:ansi_slice/ansi_slice.dart';
 import 'package:ansi_strip/ansi_strip.dart';
 import 'package:ansi_wrap/ansi_wrap.dart';
 
-int getWidth(IOSink stream) {
-  return stdout.terminalColumns;
+int getWidth(Stdout sink) {
+  if (sink.hasTerminal) {
+    return sink.terminalColumns;
+  }
+  return 80;
 }
 
-String fitToTerminalHeight(IOSink stream, String text) {
-  final terminalHeight = stdout.terminalLines;
+int getHeight(Stdout sink) {
+  if (sink.hasTerminal) {
+    return sink.terminalLines;
+  }
+  return 24;
+}
+
+String fitToTerminalHeight(Stdout sink, String text) {
+  final terminalHeight = getHeight(sink);
   final lines = text.split('\n');
 
   final toRemove = lines.length - terminalHeight;
@@ -24,7 +34,7 @@ String fitToTerminalHeight(IOSink stream, String text) {
   );
 }
 
-Render createLogUpdate(IOSink stream, {bool showCursor = true}) {
+Render createLogUpdate(Stdout stream, {bool showCursor = true}) {
   return Render(stream, showCursor);
 }
 
@@ -35,17 +45,17 @@ class Render {
   int previousLineCount = 0;
   int previousWidth;
   String previousOutput = '';
-  final IOSink stream;
+  final Stdout sink;
   final bool showCursor;
 
-  Render(this.stream, this.showCursor) : previousWidth = getWidth(stream);
+  Render(this.sink, this.showCursor) : previousWidth = getWidth(sink);
 
   void call(String output) {
     if (!showCursor) {
-      stream.write(ansiEscapes.cursorHide);
+      sink.write(ansiEscapes.cursorHide);
     }
-    output = fitToTerminalHeight(stream, output);
-    final width = getWidth(stream);
+    output = fitToTerminalHeight(sink, output);
+    final width = getWidth(sink);
     if (output == previousOutput && previousWidth == width) {
       return;
     }
@@ -53,23 +63,23 @@ class Render {
     previousOutput = output;
     previousWidth = width;
     output = wrapAnsi(output, width, trim: false, hard: true, wordWrap: false);
-    stream.write(ansiEscapes.eraseLines(previousLineCount) + output);
+    sink.write(ansiEscapes.eraseLines(previousLineCount) + output);
     previousLineCount = output.split('\n').length;
   }
 
   void clear() {
-    stream.write(ansiEscapes.eraseLines(previousLineCount));
+    sink.write(ansiEscapes.eraseLines(previousLineCount));
     previousOutput = '';
-    previousWidth = getWidth(stream);
+    previousWidth = getWidth(sink);
     previousLineCount = 0;
   }
 
   void done() {
     previousOutput = '';
-    previousWidth = getWidth(stream);
+    previousWidth = getWidth(sink);
     previousLineCount = 0;
     if (!showCursor) {
-      stream.write(ansiEscapes.cursorShow);
+      sink.write(ansiEscapes.cursorShow);
     }
   }
 }
