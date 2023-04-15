@@ -45,29 +45,30 @@ void main() {
               allowEmpty: true, gitCommitArgs: ['-m', 'Add submodule']),
           completes);
 
-      final submoduleDir = join(project.dir, 'submodule');
+      final submodulePath = join(project.dir, 'submodule');
       await writeFile('pubspec.yaml', kConfigFormatExit,
-          workingDirectory: submoduleDir);
+          workingDirectory: submodulePath);
 
       /// Stage pretty file
       await appendFile('lib/main.dart', kFormattedDart,
-          workingDirectory: submoduleDir);
-      await execGit(['add', '.'], workingDirectory: submoduleDir);
+          workingDirectory: submodulePath);
+      await execGit(['add', '.'], workingDirectory: submodulePath);
 
       /// Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
+      await project.config(submodulePath);
       await expectLater(
-          project.gitCommit(workingDirectory: submoduleDir), completes);
+          project.gitCommit(workingDirectory: submodulePath), completes);
 
       /// Nothing is wrong, so a new commit is created
       expect(
           await execGit(['rev-list', '--count', 'HEAD'],
-              workingDirectory: submoduleDir),
+              workingDirectory: submodulePath),
           equals('2'));
       expect(
           await execGit(['log', '-1', '--pretty=%B'],
-              workingDirectory: submoduleDir),
+              workingDirectory: submodulePath),
           contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: submoduleDir),
+      expect(await readFile('lib/main.dart', workingDirectory: submodulePath),
           equals(kFormattedDart));
 
       /// Commit this submodule

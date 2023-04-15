@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math';
 import 'package:path/path.dart';
 import 'package:verbose/verbose.dart';
@@ -335,8 +334,6 @@ class GitWorkflow {
     } catch (applyError) {
       verbose('Error while restoring changes:');
       verbose(applyError.toString());
-      verbose(
-          'Content of file $unstagedPatch is:\n${File(unstagedPatch).readAsStringSync()}');
       verbose('Retrying with 3-way merge');
       try {
         // Retry with a 3-way merge if normal apply fails

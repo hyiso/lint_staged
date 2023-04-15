@@ -18,14 +18,21 @@ class IntegrationProject {
     await git.execGit(['init', dir]);
 
     /// Git config
-    await execGit(['config', 'user.name', 'test']);
-    await execGit(['config', 'user.email', 'test@example.com']);
-    await execGit(['config', 'commit.gpgsign', 'false']);
-    await execGit(['config', 'merge.conflictstyle', 'merge']);
+    await config(dir);
 
     if (initialCommit) {
       await _initialCommit();
     }
+  }
+
+  Future<void> config(String dir) async {
+    await git.execGit(['config', 'user.name', 'test'], workingDirectory: dir);
+    await git.execGit(['config', 'user.email', 'test@example.com'],
+        workingDirectory: dir);
+    await git
+        .execGit(['config', 'commit.gpgsign', 'false'], workingDirectory: dir);
+    await git.execGit(['config', 'merge.conflictstyle', 'merge'],
+        workingDirectory: dir);
   }
 
   Future<void> _initialCommit() async {
