@@ -68,6 +68,7 @@ class GitWorkflow {
 
   late List<String> partiallyStagedFiles;
   late List<String> deletedFiles;
+  late bool nothingToStash;
 
   String? workingDirectory;
 
@@ -108,10 +109,6 @@ class GitWorkflow {
   Future<String> getBackupStash(LintStagedContext ctx) async {
     final stashes =
         await execGit(['stash', 'list'], workingDirectory: workingDirectory);
-
-    if (stashes.isEmpty) {
-      return '';
-    }
     final index =
         stashes.split('\n').indexWhere((line) => line.contains(kStashMessage));
     if (index == -1) {
@@ -265,16 +262,16 @@ class GitWorkflow {
       /// and `stash store` saves it as an actual stash.
       final stash = await execGit(['stash', 'create'],
           workingDirectory: workingDirectory);
+      nothingToStash = stash.isEmpty;
 
-      /// When there's nothing to stash, just skip.
-      if (stash.isNotEmpty) {
+      /// Whether there's nothing to stash.
+      if (nothingToStash) {
+        verbose('Nothing to stash.');
+      } else {
         await execGit(
             ['stash', 'store', '--quiet', '--message', kStashMessage, stash],
             workingDirectory: workingDirectory);
-      } else {
-        verbose('Nothing to stash.');
       }
-
       verbose('Done backing up original state!');
     } catch (e) {
       handleError(e, ctx);
@@ -391,16 +388,14 @@ class GitWorkflow {
   /// Drop the created stashes after everything has run
   ///
   Future<void> cleanup(LintStagedContext ctx) async {
+    if (nothingToStash) {
+      verbose('Nothing has been stashed');
+      return;
+    }
     try {
       verbose('Dropping backup stash...');
-      final stash = await getBackupStash(ctx);
-      if (stash.isNotEmpty) {
-        await execGit([
-          'stash',
-          'drop',
-          '--quiet',
-        ], workingDirectory: workingDirectory);
-      }
+      await execGit(['stash', 'drop', '--quiet', await getBackupStash(ctx)],
+          workingDirectory: workingDirectory);
       verbose('Done dropping backup stash!');
     } catch (error) {
       handleError(error, ctx);

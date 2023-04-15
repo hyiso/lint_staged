@@ -49,7 +49,7 @@ Future<String> execGit(
   final result =
       await Process.run('git', gitArgs, workingDirectory: workingDirectory);
   if (result.exitCode != 0) {
-    throw Exception('execGit ${result.stderr}');
+    throw Exception('execGit exit ${result.exitCode}, ${result.stderr}');
   }
   String output = result.stdout as String;
   if (output.endsWith('\n')) {
