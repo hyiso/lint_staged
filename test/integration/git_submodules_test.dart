@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:lint_staged/src/file.dart';
 import 'package:lint_staged/src/git.dart';
 import 'package:path/path.dart' show join;
@@ -16,51 +14,51 @@ void main() {
       print('dir: ${project.dir}');
       await project.setup();
 
-      // create a new repo for the git submodule to a temp path
-      String submoduleDir = join(project.dir, 'submodule_temp');
-      if (!await Directory(submoduleDir).exists()) {
-        await Directory(submoduleDir).create(recursive: true);
-      }
-      await execGit(['init', submoduleDir]);
-      await execGit(['config', 'user.name', '"test"'],
-          workingDirectory: submoduleDir);
-      await execGit(['config', 'user.email', '"test@test.com"'],
-          workingDirectory: submoduleDir);
-      await appendFile('README.md', '# Test\n', workingDirectory: submoduleDir);
-      await execGit(['add', 'README.md'], workingDirectory: submoduleDir);
-      await execGit(['commit', '-m initial commit'],
-          workingDirectory: submoduleDir);
+      await project.writeFile('pubspec.yaml', kConfigFormatFix);
+      await project.writeFile('lib/main.dart', kFormattedDart);
+      await project.execGit(['add', '.']);
+      await expectLater(
+          project.gitCommit(gitCommitArgs: ['-m', 'committed pretty file']),
+          completes);
 
-      // Add the newly-created repo as a submodule in a new path.
-      // This simulates adding it from a remote. By default file protocol is not allowed,
-      // see https://git-scm.com/docs/git-config#Documentation/git-config.txt-protocolallow
+      // create a new repo for the git submodule to a temp path
+      final submoduleProject = IntegrationProject();
+      await submoduleProject.setup();
+
+      /// Add the newly-created repo as a submodule in a new path.
+      /// This simulates adding it from a remote. By default file protocol is not allowed,
+      /// see https://git-scm.com/docs/git-config#Documentation/git-config.txt-protocolallow
       await project.execGit([
         '-c',
         'protocol.file.allow=always',
         'submodule',
         'add',
         '--force',
-        './submodule_temp',
+        submoduleProject.dir,
         './submodule',
       ]);
-      submoduleDir = join(project.dir, 'submodule');
-      // Set these again for Windows git in CI
-      await execGit(['config', 'user.name', '"test"'],
-          workingDirectory: submoduleDir);
-      await execGit(['config', 'user.email', '"test@test.com"'],
-          workingDirectory: submoduleDir);
+
+      /// Commit this submodule
+      await project.execGit(['add', '.']);
+      await expectLater(
+          project.gitCommit(
+              allowEmpty: true, gitCommitArgs: ['-m', 'Add submodule']),
+          completes);
+
+      final submoduleDir = join(project.dir, 'submodule');
       await writeFile('pubspec.yaml', kConfigFormatExit,
           workingDirectory: submoduleDir);
 
-      // Stage pretty file
+      /// Stage pretty file
       await appendFile('lib/main.dart', kFormattedDart,
           workingDirectory: submoduleDir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: submoduleDir);
+      await execGit(['add', '.'], workingDirectory: submoduleDir);
 
-      // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
-      await project.gitCommit(workingDirectory: submoduleDir);
+      /// Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
+      await expectLater(
+          project.gitCommit(workingDirectory: submoduleDir), completes);
 
-      // Nothing is wrong, so a new commit is created
+      /// Nothing is wrong, so a new commit is created
       expect(
           await execGit(['rev-list', '--count', 'HEAD'],
               workingDirectory: submoduleDir),
@@ -71,6 +69,13 @@ void main() {
           contains('test'));
       expect(await readFile('lib/main.dart', workingDirectory: submoduleDir),
           equals(kFormattedDart));
+
+      /// Commit this submodule
+      await project.execGit(['add', '.']);
+      await expectLater(
+          project.gitCommit(
+              allowEmpty: true, gitCommitArgs: ['-m', 'Update submodule']),
+          completes);
     });
   });
 }

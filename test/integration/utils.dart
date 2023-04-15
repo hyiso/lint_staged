@@ -11,6 +11,8 @@ class IntegrationProject {
       : dir = join(Directory.systemTemp.path, 'tmp',
             'husky_test_${DateTime.now().microsecondsSinceEpoch}');
 
+  IntegrationProject.dirctory(this.dir);
+
   Future<void> setup({bool initialCommit = true}) async {
     /// Git init
     await git.execGit(['init', dir]);

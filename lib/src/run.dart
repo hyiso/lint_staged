@@ -113,9 +113,11 @@ Future<LintStagedContext> runAll({
     await git.hideUnstagedChanges(ctx);
     logger.success('Hiding unstaged changes to partially staged files...');
   }
-  logger.progress('Running tasks for staged files...');
-  await Future.wait(tasks.map((task) => task()));
-  logger.success('Running tasks for staged files...');
+  if (matchedFiles.isNotEmpty) {
+    logger.progress('Running tasks for staged files...');
+    await Future.wait(tasks.map((task) => task()));
+    logger.success('Running tasks for staged files...');
+  }
   if (!applyModifationsSkipped(ctx)) {
     logger.progress('Applying modifications from tasks...');
     await git.applyModifications(ctx);
@@ -126,6 +128,8 @@ Future<LintStagedContext> runAll({
     await git.resotreUnstagedChanges(ctx);
     logger.success('Restoring unstaged changes to partially staged files...');
   }
+  verbose(
+      'should restore origin state: ${restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)}');
   if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
     logger.progress('Reverting to original state because of errors...');
     await git.restoreOriginState(ctx);

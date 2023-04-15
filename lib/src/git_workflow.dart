@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:path/path.dart';
 import 'package:verbose/verbose.dart';
@@ -33,7 +34,7 @@ List<String> processRenames(List<String> files,
   });
 }
 
-const kStash = 'lint_staged automatic backup';
+const kStashMessage = 'lint_staged automatic backup';
 
 const kMergeHead = 'MERGE_HEAD';
 const kMergeMode = 'MERGE_MODE';
@@ -107,8 +108,12 @@ class GitWorkflow {
   Future<String> getBackupStash(LintStagedContext ctx) async {
     final stashes =
         await execGit(['stash', 'list'], workingDirectory: workingDirectory);
+
+    if (stashes.isEmpty) {
+      return '';
+    }
     final index =
-        stashes.split('\n').indexWhere((line) => line.contains(kStash));
+        stashes.split('\n').indexWhere((line) => line.contains(kStashMessage));
     if (index == -1) {
       ctx.errors.add(kGetBackupStashError);
       throw Exception('lint_staged automatic backup is missing!');
@@ -255,13 +260,20 @@ class GitWorkflow {
       /// - git stash can't infer RD or MD states correctly, and will lose the deletion
       deletedFiles = await getDeletedFiles();
 
-      // Save stash of all staged files.
-      // The `stash create` command creates a dangling commit without removing any files,
-      // and `stash store` saves it as an actual stash.
-      final hash = await execGit(['stash', 'create'],
+      /// Save stash of all staged files.
+      /// The `stash create` command creates a dangling commit without removing any files,
+      /// and `stash store` saves it as an actual stash.
+      final stash = await execGit(['stash', 'create'],
           workingDirectory: workingDirectory);
-      await execGit(['stash', 'store', '--quiet', '--message', kStash, hash],
-          workingDirectory: workingDirectory);
+
+      /// When there's nothing to stash, just skip.
+      if (stash.isNotEmpty) {
+        await execGit(
+            ['stash', 'store', '--quiet', '--message', kStashMessage, stash],
+            workingDirectory: workingDirectory);
+      } else {
+        verbose('Nothing to stash.');
+      }
 
       verbose('Done backing up original state!');
     } catch (e) {
@@ -326,6 +338,8 @@ class GitWorkflow {
     } catch (applyError) {
       verbose('Error while restoring changes:');
       verbose(applyError.toString());
+      verbose(
+          'Content of file $unstagedPatch is:\n${File(unstagedPatch).readAsStringSync()}');
       verbose('Retrying with 3-way merge');
       try {
         // Retry with a 3-way merge if normal apply fails
@@ -368,6 +382,7 @@ class GitWorkflow {
 
       verbose('Done restoring original state!');
     } catch (error) {
+      verbose('Restoring original state error: $error');
       handleError(error, ctx, kRestoreOriginalStateError);
     }
   }
@@ -378,8 +393,14 @@ class GitWorkflow {
   Future<void> cleanup(LintStagedContext ctx) async {
     try {
       verbose('Dropping backup stash...');
-      await execGit(['stash', 'drop', '--quiet', await getBackupStash(ctx)],
-          workingDirectory: workingDirectory);
+      final stash = await getBackupStash(ctx);
+      if (stash.isNotEmpty) {
+        await execGit([
+          'stash',
+          'drop',
+          '--quiet',
+        ], workingDirectory: workingDirectory);
+      }
       verbose('Done dropping backup stash!');
     } catch (error) {
       handleError(error, ctx);
@@ -387,10 +408,10 @@ class GitWorkflow {
   }
 
   void handleError(e, LintStagedContext ctx, [Symbol? symbol]) {
+    verbose(StackTrace.current.toString());
     ctx.errors.add(kGitError);
     if (symbol != null) {
       ctx.errors.add(symbol);
     }
-    // throw e;
   }
 }
