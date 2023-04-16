@@ -1,10 +1,10 @@
-## 0.3.0-pre.0
+## 0.3.0-pre.1
 
 > Note: This release has breaking changes.
 
- - **Fix**: skip stash when nothing to stash.(fix #5)
+ - **Fix**: Skip stash when nothing to stash.(fix #5)
  - **BREAKING** **FEAT**: Replace support of `DEBUG=true` env to `VERBOSE=true` by using package [`verbose`](https://pub.dev/packages/verbose).
- - **FEAT**: Use step spinner when running tasks.
+ - **FEAT**: Use `SpinnerProgress` when step is running.
 
 ## 0.2.0
 
