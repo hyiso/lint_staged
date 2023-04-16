@@ -105,40 +105,46 @@ Future<LintStagedContext> runAll({
     matchedFileChunks: matchedFileChunks,
     workingDirectory: workingDirectory,
   );
-  logger.progress('Preparing lint_staged...');
+  SpinnerProgress progress = logger.progress('Preparing lint_staged...');
   await git.prepare(ctx);
-  logger.success('Preparing lint_staged...');
+  progress.finish();
   if (ctx.hasPartiallyStagedFiles) {
-    logger.progress('Hiding unstaged changes to partially staged files...');
+    progress =
+        logger.progress('Hiding unstaged changes to partially staged files...');
     await git.hideUnstagedChanges(ctx);
-    logger.success('Hiding unstaged changes to partially staged files...');
+    progress.finish();
   }
   if (matchedFiles.isNotEmpty) {
-    logger.progress('Running tasks for staged files...');
+    progress = logger.progress('Running tasks for staged files...');
     await Future.wait(tasks.map((task) => task()));
-    logger.success('Running tasks for staged files...');
+    progress.finish();
+    // logger.success('Running tasks for staged files...');
   }
   if (!applyModifationsSkipped(ctx)) {
-    logger.progress('Applying modifications from tasks...');
+    progress = logger.progress('Applying modifications from tasks...');
     await git.applyModifications(ctx);
-    logger.success('Applying modifications from tasks...');
+    progress.finish();
+    // logger.success('Applying modifications from tasks...');
   }
   if (ctx.hasPartiallyStagedFiles && !restoreUnstagedChangesSkipped(ctx)) {
-    logger.progress('Restoring unstaged changes to partially staged files...');
+    progress = logger
+        .progress('Restoring unstaged changes to partially staged files...');
     await git.resotreUnstagedChanges(ctx);
-    logger.success('Restoring unstaged changes to partially staged files...');
+    progress.finish();
+    // logger.success('Restoring unstaged changes to partially staged files...');
   }
-  verbose(
-      'should restore origin state: ${restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)}');
   if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
-    logger.progress('Reverting to original state because of errors...');
+    progress =
+        logger.progress('Reverting to original state because of errors...');
     await git.restoreOriginState(ctx);
-    logger.success('Reverting to original state because of errors...');
+    progress.finish();
+    // logger.success('Reverting to original state because of errors...');
   }
   if (cleanupEnabled(ctx) && !cleanupSkipped(ctx)) {
-    logger.progress('Cleaning up temporary files...');
+    progress = logger.progress('Cleaning up temporary files...');
     await git.cleanup(ctx);
-    logger.success('Cleaning up temporary files...');
+    progress.finish();
+    // logger.success('Cleaning up temporary files...');
   }
   if (ctx.errors.isNotEmpty) {
     throw createError(ctx);
