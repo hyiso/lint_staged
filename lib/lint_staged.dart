@@ -1,8 +1,10 @@
+import 'dart:io';
+
 import 'package:verbose/verbose.dart';
 
 import 'src/context.dart';
 import 'src/exception.dart';
-import 'src/logger.dart';
+import 'src/logging.dart';
 import 'src/message.dart';
 import 'src/run.dart';
 import 'src/symbols.dart';
@@ -23,19 +25,18 @@ Future<bool> lintStaged({
   String? workingDirectory,
   int maxArgLength = 0,
 }) async {
-  final logger = Logger();
   try {
+    final spinner = Spinner();
     final ctx = await runAll(
         allowEmpty: allowEmpty,
         diff: diff,
         diffFilter: diffFilter,
         stash: stash,
-        logger: logger,
         maxArgLength: maxArgLength,
-        workingDirectory: workingDirectory);
-    _printTaskOutput(ctx, logger);
+        workingDirectory: workingDirectory,
+        spinner: spinner);
+    _printTaskOutput(ctx);
     return true;
-    // ignore: empty_catches
   } catch (e) {
     final verbose = Verbose('lint_staged');
     if (e is LintStagedException && e.ctx.errors.isNotEmpty) {
@@ -51,17 +52,16 @@ Future<bool> lintStaged({
           verbose(kRestoreStashExampleMsg);
         }
       }
-
-      _printTaskOutput(e.ctx, logger);
+      _printTaskOutput(e.ctx);
       return false;
     }
     rethrow;
   }
 }
 
-void _printTaskOutput(LintStagedContext ctx, Logger logger) {
+void _printTaskOutput(LintStagedContext ctx) {
   if (ctx.output.isEmpty) return;
-  final log = ctx.errors.isNotEmpty ? logger.error : logger.success;
+  final log = ctx.errors.isNotEmpty ? stdout.failed : stdout.success;
   for (var line in ctx.output) {
     log(line);
   }

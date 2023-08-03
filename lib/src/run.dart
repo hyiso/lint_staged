@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:glob/glob.dart';
-import 'package:lint_staged/src/logger.dart';
 import 'package:verbose/verbose.dart';
 
 import 'chunk.dart';
@@ -10,6 +9,7 @@ import 'exception.dart';
 import 'git.dart';
 import 'git_workflow.dart';
 import 'lint_runner.dart';
+import 'logging.dart';
 import 'message.dart';
 import 'context.dart';
 import 'symbols.dart';
@@ -23,7 +23,7 @@ Future<LintStagedContext> runAll({
   bool stash = true,
   String? workingDirectory,
   int maxArgLength = 0,
-  required Logger logger,
+  required Spinner spinner,
 }) async {
   final ctx = getInitialContext();
   if (!FileSystemEntity.isDirectorySync('.git') &&
@@ -51,11 +51,6 @@ Future<LintStagedContext> runAll({
     diffFilter: diffFilter,
     workingDirectory: workingDirectory,
   );
-  if (stagedFiles == null) {
-    ctx.output.add(kGetStagedFilesErrorMsg);
-    ctx.errors.add(kGetStagedFilesError);
-    throw createError(ctx, kNoStagedFilesMsg);
-  }
   if (stagedFiles.isEmpty) {
     ctx.output.add(kNoStagedFilesMsg);
     return ctx;
@@ -105,46 +100,38 @@ Future<LintStagedContext> runAll({
     matchedFileChunks: matchedFileChunks,
     workingDirectory: workingDirectory,
   );
-  SpinnerProgress progress = logger.progress('Preparing lint_staged...');
+  spinner.progress('Preparing lint_staged...');
   await git.prepare(ctx);
-  progress.finish();
+  spinner.success('Prepared lint_staged');
   if (ctx.hasPartiallyStagedFiles) {
-    progress =
-        logger.progress('Hiding unstaged changes to partially staged files...');
+    spinner.progress('Hiding unstaged changes to partially staged files...');
     await git.hideUnstagedChanges(ctx);
-    progress.finish();
+    spinner.success('Hide unstaged changes to partially staged files');
   }
   if (matchedFiles.isNotEmpty) {
-    progress = logger.progress('Running tasks for staged files...');
+    spinner.progress('Running tasks for staged files...');
     await Future.wait(tasks.map((task) => task()));
-    progress.finish();
-    // logger.success('Running tasks for staged files...');
+    spinner.success('Running tasks for staged files');
   }
   if (!applyModifationsSkipped(ctx)) {
-    progress = logger.progress('Applying modifications from tasks...');
+    spinner.progress('Applying modifications from tasks...');
     await git.applyModifications(ctx);
-    progress.finish();
-    // logger.success('Applying modifications from tasks...');
+    spinner.success('Applied modifications from tasks');
   }
   if (ctx.hasPartiallyStagedFiles && !restoreUnstagedChangesSkipped(ctx)) {
-    progress = logger
-        .progress('Restoring unstaged changes to partially staged files...');
+    spinner.progress('Restoring unstaged changes to partially staged files...');
     await git.resotreUnstagedChanges(ctx);
-    progress.finish();
-    // logger.success('Restoring unstaged changes to partially staged files...');
+    spinner.success('Restored unstaged changes to partially staged files');
   }
   if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
-    progress =
-        logger.progress('Reverting to original state because of errors...');
+    spinner.progress('Reverting to original state because of errors...');
     await git.restoreOriginState(ctx);
-    progress.finish();
-    // logger.success('Reverting to original state because of errors...');
+    spinner.success('Reverted to original state because of errors');
   }
   if (cleanupEnabled(ctx) && !cleanupSkipped(ctx)) {
-    progress = logger.progress('Cleaning up temporary files...');
+    spinner.progress('Cleaning up temporary files...');
     await git.cleanup(ctx);
-    progress.finish();
-    // logger.success('Cleaning up temporary files...');
+    spinner.success('Cleaned up temporary files');
   }
   if (ctx.errors.isNotEmpty) {
     throw createError(ctx);

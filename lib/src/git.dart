@@ -69,7 +69,7 @@ List<String> parseGitZOutput(String input) {
       : input.replaceFirst(RegExp(r'\u0000$'), '').split('\u0000');
 }
 
-Future<List<String>?> getStagedFiles({
+Future<List<String>> getStagedFiles({
   List<String> diff = const [],
   String? diffFilter,
   String? workingDirectory,
