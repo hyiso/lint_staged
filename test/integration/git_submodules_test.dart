@@ -1,5 +1,3 @@
-import 'package:lint_staged/src/file.dart';
-import 'package:lint_staged/src/git.dart';
 import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
 
@@ -11,68 +9,60 @@ void main() {
   group('lint_staged', () {
     test('handles git submodules', () async {
       final project = IntegrationProject();
-      print('dir: ${project.dir}');
+      print('dir: ${project.path}');
       await project.setup();
 
-      await project.writeFile('pubspec.yaml', kConfigFormatFix);
-      await project.writeFile('lib/main.dart', kFormattedDart);
-      await project.execGit(['add', '.']);
+      await project.fs.write('pubspec.yaml', kConfigFormatFix);
+      await project.fs.write('lib/main.dart', kFormattedDart);
+      await project.git.run(['add', '.']);
       await expectLater(
           project.gitCommit(gitCommitArgs: ['-m', 'committed pretty file']),
           completes);
 
       // create a new repo for the git submodule to a temp path
-      final submoduleProject = IntegrationProject();
-      await submoduleProject.setup();
+      final anotherProject = IntegrationProject();
+      await anotherProject.setup();
 
       /// Add the newly-created repo as a submodule in a new path.
       /// This simulates adding it from a remote. By default file protocol is not allowed,
       /// see https://git-scm.com/docs/git-config#Documentation/git-config.txt-protocolallow
-      await project.execGit([
+      await project.git.run([
         '-c',
         'protocol.file.allow=always',
         'submodule',
         'add',
         '--force',
-        submoduleProject.dir,
+        anotherProject.path,
         './submodule',
       ]);
 
       /// Commit this submodule
-      await project.execGit(['add', '.']);
+      await project.git.run(['add', '.']);
       await expectLater(
           project.gitCommit(
               allowEmpty: true, gitCommitArgs: ['-m', 'Add submodule']),
           completes);
 
-      final submodulePath = join(project.dir, 'submodule');
-      await writeFile('pubspec.yaml', kConfigFormatExit,
-          workingDirectory: submodulePath);
+      final submoduleProject =
+          IntegrationProject(join(project.path, 'submodule'));
+      await submoduleProject.fs.write('pubspec.yaml', kConfigFormatExit);
 
       /// Stage pretty file
-      await appendFile('lib/main.dart', kFormattedDart,
-          workingDirectory: submodulePath);
-      await execGit(['add', '.'], workingDirectory: submodulePath);
+      await submoduleProject.fs.append('lib/main.dart', kFormattedDart);
+      await submoduleProject.git.run(['add', '.']);
 
       /// Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
-      await project.config(submodulePath);
-      await expectLater(
-          project.gitCommit(workingDirectory: submodulePath), completes);
+      await submoduleProject.config();
+      await expectLater(submoduleProject.gitCommit(), completes);
 
       /// Nothing is wrong, so a new commit is created
-      expect(
-          await execGit(['rev-list', '--count', 'HEAD'],
-              workingDirectory: submodulePath),
-          equals('2'));
-      expect(
-          await execGit(['log', '-1', '--pretty=%B'],
-              workingDirectory: submodulePath),
-          contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: submodulePath),
+      expect(await submoduleProject.git.commitCount, equals(2));
+      expect(await submoduleProject.git.lastCommit, contains('test'));
+      expect(await submoduleProject.fs.read('lib/main.dart'),
           equals(kFormattedDart));
 
       /// Commit this submodule
-      await project.execGit(['add', '.']);
+      await project.git.run(['add', '.']);
       await expectLater(
           project.gitCommit(
               allowEmpty: true, gitCommitArgs: ['-m', 'Update submodule']),

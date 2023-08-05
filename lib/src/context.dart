@@ -1,15 +1,15 @@
 import 'symbols.dart';
 
-class LintStagedContext {
+class Context {
   bool hasPartiallyStagedFiles = false;
   bool shouldBackup = false;
   Set<Object> errors = {};
   List<String> output = [];
 }
 
-LintStagedContext getInitialContext() => LintStagedContext();
+Context getInitialContext() => Context();
 
-bool applyModifationsSkipped(LintStagedContext ctx) {
+bool applyModifationsSkipped(Context ctx) {
   /// Always apply back unstaged modifications when skipping backup
   if (!ctx.shouldBackup) return false;
 
@@ -25,7 +25,7 @@ bool applyModifationsSkipped(LintStagedContext ctx) {
   return false;
 }
 
-bool restoreUnstagedChangesSkipped(LintStagedContext ctx) {
+bool restoreUnstagedChangesSkipped(Context ctx) {
   /// Should be skipped in case of git errors
   if (ctx.errors.contains(kGitError)) {
     return true;
@@ -38,13 +38,13 @@ bool restoreUnstagedChangesSkipped(LintStagedContext ctx) {
   return false;
 }
 
-bool restoreOriginalStateEnabled(LintStagedContext ctx) =>
+bool restoreOriginalStateEnabled(Context ctx) =>
     ctx.shouldBackup &&
     (ctx.errors.contains(kTaskError) ||
         ctx.errors.contains(kApplyEmptyCommitError) ||
         ctx.errors.contains(kRestoreUnstagedChangesError));
 
-bool restoreOriginalStateSkipped(LintStagedContext ctx) {
+bool restoreOriginalStateSkipped(Context ctx) {
   // Should be skipped in case of unknown git errors
   if (ctx.errors.contains(kGitError) &&
       !ctx.errors.contains(kApplyEmptyCommitError) &&
@@ -54,9 +54,9 @@ bool restoreOriginalStateSkipped(LintStagedContext ctx) {
   return false;
 }
 
-bool cleanupEnabled(LintStagedContext ctx) => ctx.shouldBackup;
+bool cleanupEnabled(Context ctx) => ctx.shouldBackup;
 
-bool cleanupSkipped(LintStagedContext ctx) {
+bool cleanupSkipped(Context ctx) {
   // Should be skipped in case of unknown git errors
   if (ctx.errors.contains(kGitError) &&
       !ctx.errors.contains(kApplyEmptyCommitError) &&

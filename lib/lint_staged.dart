@@ -1,8 +1,7 @@
-import 'package:verbose/verbose.dart';
+import 'dart:io';
 
 import 'src/context.dart';
-import 'src/exception.dart';
-import 'src/logger.dart';
+import 'src/logging.dart';
 import 'src/message.dart';
 import 'src/run.dart';
 import 'src/symbols.dart';
@@ -23,45 +22,40 @@ Future<bool> lintStaged({
   String? workingDirectory,
   int maxArgLength = 0,
 }) async {
-  final logger = Logger();
   try {
     final ctx = await runAll(
         allowEmpty: allowEmpty,
         diff: diff,
         diffFilter: diffFilter,
         stash: stash,
-        logger: logger,
         maxArgLength: maxArgLength,
         workingDirectory: workingDirectory);
-    _printTaskOutput(ctx, logger);
+    _printTaskOutput(ctx);
     return true;
-    // ignore: empty_catches
   } catch (e) {
-    final verbose = Verbose('lint_staged');
-    if (e is LintStagedException && e.ctx.errors.isNotEmpty) {
-      if (e.ctx.errors.contains(kConfigNotFoundError)) {
-        verbose(kNoConfigurationMsg);
-      } else if (e.ctx.errors.contains(kApplyEmptyCommitError)) {
-        verbose(kPreventedEmptyCommitMsg);
-      } else if (e.ctx.errors.contains(kGitError) &&
-          !e.ctx.errors.contains(kGetBackupStashError)) {
-        verbose(kGitErrorMsg);
-        if (e.ctx.shouldBackup) {
+    if (e is Context) {
+      if (e.errors.contains(kConfigNotFoundError)) {
+        stdout.error(kNoConfigurationMsg);
+      } else if (e.errors.contains(kApplyEmptyCommitError)) {
+        stdout.warn(kPreventedEmptyCommitMsg);
+      } else if (e.errors.contains(kGitError) &&
+          !e.errors.contains(kGetBackupStashError)) {
+        stdout.failed(kGitErrorMsg);
+        if (e.shouldBackup) {
           // No sense to show this if the backup stash itself is missing.
-          verbose(kRestoreStashExampleMsg);
+          stdout.error(kRestoreStashExampleMsg);
         }
       }
-
-      _printTaskOutput(e.ctx, logger);
+      _printTaskOutput(e);
       return false;
     }
     rethrow;
   }
 }
 
-void _printTaskOutput(LintStagedContext ctx, Logger logger) {
+void _printTaskOutput(Context ctx) {
   if (ctx.output.isEmpty) return;
-  final log = ctx.errors.isNotEmpty ? logger.error : logger.success;
+  final log = ctx.errors.isNotEmpty ? stdout.failed : stdout.success;
   for (var line in ctx.output) {
     log(line);
   }

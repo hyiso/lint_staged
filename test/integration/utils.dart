@@ -1,82 +1,56 @@
 import 'dart:io';
 import 'package:lint_staged/lint_staged.dart';
-import 'package:lint_staged/src/file.dart' as file;
-import 'package:lint_staged/src/git.dart' as git;
+import 'package:lint_staged/src/fs.dart';
+import 'package:lint_staged/src/git.dart';
 import 'package:path/path.dart';
 
+String _temp() => join(Directory.systemTemp.path, 'tmp',
+    'husky_test_${DateTime.now().microsecondsSinceEpoch}');
+
 class IntegrationProject {
-  final String dir;
-
-  IntegrationProject()
-      : dir = join(Directory.systemTemp.path, 'tmp',
-            'husky_test_${DateTime.now().microsecondsSinceEpoch}');
-
-  IntegrationProject.dirctory(this.dir);
+  final String path;
+  late final Git git = Git(workingDirectory: path);
+  late final fs = FileSystem(path);
+  IntegrationProject([String? directory]) : path = directory ?? _temp();
 
   Future<void> setup({bool initialCommit = true}) async {
     /// Git init
-    await git.execGit(['init', dir]);
+    await Process.run('git', ['init', path]);
 
     /// Git config
-    await config(dir);
+    await config();
 
     if (initialCommit) {
       await _initialCommit();
     }
   }
 
-  Future<void> config(String dir) async {
-    await git.execGit(['config', 'user.name', 'test'], workingDirectory: dir);
-    await git.execGit(['config', 'user.email', 'test@example.com'],
-        workingDirectory: dir);
-    await git
-        .execGit(['config', 'commit.gpgsign', 'false'], workingDirectory: dir);
-    await git.execGit(['config', 'merge.conflictstyle', 'merge'],
-        workingDirectory: dir);
+  Future<void> config() async {
+    await git.run(['config', 'user.name', 'test']);
+    await git.run(['config', 'user.email', 'test@example.com']);
+    await git.run(['config', 'commit.gpgsign', 'false']);
+    await git.run(['config', 'merge.conflictstyle', 'merge']);
   }
 
   Future<void> _initialCommit() async {
-    await appendFile('README.md', '# Test\n');
-    await execGit(['add', 'README.md']);
-    await execGit(['commit', '-m initial commit']);
+    await fs.append('README.md', '# Test\n');
+    await git.run(['add', 'README.md']);
+    await git.run(['commit', '-m initial commit']);
   }
-
-  Future<String> execGit(List<String> args) =>
-      git.execGit(args, workingDirectory: dir);
 
   Future<void> gitCommit({
     bool allowEmpty = false,
     int maxArgLength = 0,
     List<String>? gitCommitArgs,
-    String? workingDirectory,
   }) async {
     final passed = await lintStaged(
         maxArgLength: maxArgLength,
         allowEmpty: allowEmpty,
-        workingDirectory: workingDirectory ?? dir);
+        workingDirectory: path);
     if (!passed) {
       throw Exception('lint_staged not passed!');
     }
     final commitArgs = gitCommitArgs ?? ['-m test'];
-    await git.execGit(['commit', ...commitArgs],
-        workingDirectory: workingDirectory ?? dir);
+    await git.run(['commit', ...commitArgs]);
   }
-
-  Future<void> appendFile(String filename, String content) =>
-      file.appendFile(filename, content, workingDirectory: dir);
-
-  Future<void> writeFile(
-    String filename,
-    String content,
-  ) =>
-      file.writeFile(filename, content, workingDirectory: dir);
-
-  Future<void> removeFile(String filename) =>
-      file.removeFile(filename, workingDirectory: dir);
-
-  Future<String?> readFile(String filename) =>
-      file.readFile(filename, workingDirectory: dir);
-
-  Future<bool> existsFile(String filename) =>
-      File(join(dir, filename)).exists();
 }

@@ -22,20 +22,14 @@ void main(List<String> arguments) async {
   final diff = argResults['diff'];
   final diffFilter = argResults['diff-filter'];
   final stash = argResults['stash'] == true;
-  try {
-    final passed = await lintStaged(
-      allowEmpty: allowEmpty,
-      diff: diff,
-      diffFilter: diffFilter,
-      stash: stash,
-      maxArgLength: _maxArgLength ~/ 2,
-    );
-    exit(passed ? 0 : 1);
-  } catch (e, stack) {
-    print(e);
-    print(stack);
-    exit(1);
-  }
+  final passed = await lintStaged(
+    allowEmpty: allowEmpty,
+    diff: diff,
+    diffFilter: diffFilter,
+    stash: stash,
+    maxArgLength: _maxArgLength ~/ 2,
+  );
+  exit(passed ? 0 : 1);
 }
 
 ///
