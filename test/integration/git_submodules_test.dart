@@ -12,8 +12,8 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatFix);
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.write('pubspec.yaml', kConfigFormatFix);
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', '.']);
       await expectLater(
           project.gitCommit(gitCommitArgs: ['-m', 'committed pretty file']),
@@ -45,10 +45,10 @@ void main() {
 
       final submoduleProject =
           IntegrationProject(join(project.path, 'submodule'));
-      await submoduleProject.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await submoduleProject.fs.write('pubspec.yaml', kConfigFormatExit);
 
       /// Stage pretty file
-      await submoduleProject.fs.appendFile('lib/main.dart', kFormattedDart);
+      await submoduleProject.fs.append('lib/main.dart', kFormattedDart);
       await submoduleProject.git.run(['add', '.']);
 
       /// Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
@@ -60,7 +60,7 @@ void main() {
           equals('2'));
       expect(await submoduleProject.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(await submoduleProject.fs.readFile('lib/main.dart'),
+      expect(await submoduleProject.fs.read('lib/main.dart'),
           equals(kFormattedDart));
 
       /// Commit this submodule

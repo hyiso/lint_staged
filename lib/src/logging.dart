@@ -3,12 +3,14 @@ import 'dart:io' as io;
 
 import 'package:ansi/ansi.dart';
 import 'package:ansi_escapes/ansi_escapes.dart';
+import 'package:path/path.dart';
 import 'package:verbose/verbose.dart';
 
 class _Figures {
   static const success = '✔';
   static const error = '✗';
   static const skipped = '↓';
+  static const warn = '⚠';
 }
 
 extension IOSink on io.IOSink {
@@ -21,13 +23,19 @@ extension IOSink on io.IOSink {
   }
 
   void warn(String message) {
-    writeln(ansi.yellow(message));
+    writeln(ansi.yellow('${_Figures.warn} $message'));
+  }
+
+  void error(String message) {
+    writeln(ansi.red(message));
   }
 
   void success(String message) {
     writeln('${ansi.green(_Figures.success)} $message');
   }
 }
+
+final _isTest = basename(io.Platform.script.path).startsWith('test.dart');
 
 class Spinner {
   final Stopwatch _stopwatch;
@@ -64,7 +72,7 @@ class Spinner {
     io.stdout.write(_frame);
     _stopwatch.reset();
     _stopwatch.start();
-    if (Verbose.enabled) {
+    if (Verbose.enabled || _isTest) {
       io.stdout.write('\n');
       return;
     }
@@ -74,11 +82,12 @@ class Spinner {
   }
 
   void _stop() {
+    if (Verbose.enabled || _isTest) {
+      return;
+    }
     io.stdout.write(ansiEscapes.eraseLines(_lineCount));
     _stopwatch.stop();
-    if (Verbose.enabled) {
-      return;
-    } else if (_timer.isActive) {
+    if (_timer.isActive) {
       _timer.cancel();
     }
   }

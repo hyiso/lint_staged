@@ -11,15 +11,15 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.append('pubspec.yaml', kConfigFormatExit);
 
       // Stage pretty file
-      await project.fs.appendFile('lib/main.dart', kFormattedDart);
+      await project.fs.append('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Edit pretty file but do not stage changes
       final appended = '\nprint("test");\n';
-      await project.fs.appendFile('lib/main.dart', appended);
+      await project.fs.append('lib/main.dart', appended);
 
       await project.gitCommit();
 
@@ -39,7 +39,7 @@ void main() {
       expect(status, contains('modified:   lib/main.dart'));
       expect(status, contains('no changes added to commit'));
 
-      expect(await project.fs.readFile('lib/main.dart'),
+      expect(await project.fs.read('lib/main.dart'),
           equals(kFormattedDart + appended));
     });
     test(
@@ -49,15 +49,15 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
 
       // Stage ugly file
-      await project.fs.appendFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.append('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Edit ugly file but do not stage changes
       final appended = '\n\nprint("test");\n';
-      await project.fs.appendFile('lib/main.dart', appended);
+      await project.fs.append('lib/main.dart', appended);
 
       await project.gitCommit();
 
@@ -78,7 +78,7 @@ void main() {
       expect(status, contains('no changes added to commit'));
 
       // File is pretty, and has been edited
-      expect(await project.fs.readFile('lib/main.dart'),
+      expect(await project.fs.read('lib/main.dart'),
           equals(kFormattedDart + appended));
     });
     test(
@@ -88,15 +88,15 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.append('pubspec.yaml', kConfigFormatExit);
 
       // Stage ugly file
-      await project.fs.appendFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.append('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Edit ugly file but do not stage changes
       final appended = '\nprint("test");\n';
-      await project.fs.appendFile('lib/main.dart', appended);
+      await project.fs.append('lib/main.dart', appended);
       final status = await project.git.status();
 
       // Run lint_staged with `dart format --set-exit-if-changed` to break the linter
@@ -108,7 +108,7 @@ void main() {
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
       expect(await project.git.stdout(['status']), equals(status));
-      expect(await project.fs.readFile('lib/main.dart'),
+      expect(await project.fs.read('lib/main.dart'),
           equals(kUnFormattedDart + appended));
     });
     test(
@@ -118,15 +118,15 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
 
       // Add unfixable file to commit so `prettier --write` breaks
-      await project.fs.appendFile('lib/main.dart', kInvalidDart);
+      await project.fs.append('lib/main.dart', kInvalidDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Edit unfixable file but do not stage changes
       final appended = '\nprint("test");\n';
-      await project.fs.appendFile('lib/main.dart', appended);
+      await project.fs.append('lib/main.dart', appended);
       final status = await project.git.status();
 
       await expectLater(project.gitCommit(), throwsException);
@@ -137,7 +137,7 @@ void main() {
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
       expect(await project.git.status(), equals(status));
-      expect(await project.fs.readFile('lib/main.dart'),
+      expect(await project.fs.read('lib/main.dart'),
           equals(kInvalidDart + appended));
     });
   });

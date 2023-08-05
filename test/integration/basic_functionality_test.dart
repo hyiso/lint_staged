@@ -11,10 +11,10 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // Stage formatted file
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted file
@@ -25,8 +25,7 @@ void main() {
           equals('2'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(
-          await project.fs.readFile('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
 
     test('commits entire staged file when no errors and linter modifies file',
@@ -35,13 +34,13 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.write('pubspec.yaml', kConfigFormatFix);
 
       // Stage multi unformatted files
-      await project.fs.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.write('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
-      await project.fs.writeFile('lib/foo.dart', kUnFormattedDart);
+      await project.fs.write('lib/foo.dart', kUnFormattedDart);
       await project.git.run(['add', 'lib/foo.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
@@ -52,9 +51,8 @@ void main() {
           equals('2'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(
-          await project.fs.readFile('lib/main.dart'), equals(kFormattedDart));
-      expect(await project.fs.readFile('lib/foo.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/foo.dart'), equals(kFormattedDart));
     });
 
     test('fails to commit entire staged file when errors from linter',
@@ -63,10 +61,10 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // Stage unformatted file
-      await project.fs.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.write('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
       final status = await project.git.status();
 
@@ -79,8 +77,7 @@ void main() {
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
       expect(await project.git.status(), equals(status));
-      expect(
-          await project.fs.readFile('lib/main.dart'), equals(kUnFormattedDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kUnFormattedDart));
     });
 
     test(
@@ -90,10 +87,10 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.write('pubspec.yaml', kConfigFormatFix);
 
       // Stage invalid file
-      await project.fs.writeFile('lib/main.dart', kInvalidDart);
+      await project.fs.write('lib/main.dart', kInvalidDart);
       await project.git.run(['add', 'lib/main.dart']);
       final status = await project.git.status();
 
@@ -106,7 +103,7 @@ void main() {
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
       expect(await project.git.status(), equals(status));
-      expect(await project.fs.readFile('lib/main.dart'), equals(kInvalidDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kInvalidDart));
     });
 
     test('clears unstaged changes when linter applies same changes', () async {
@@ -114,18 +111,18 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
 
       // Stage unformatted file
-      await project.fs.appendFile(
+      await project.fs.append(
         'lib/main.dart',
         kUnFormattedDart,
       );
       await project.git.run(['add', 'lib/main.dart']);
 
       // Replace unformatted file with formatted but do not stage changes
-      await project.fs.removeFile('lib/main.dart');
-      await project.fs.appendFile('lib/main.dart', kFormattedDart);
+      await project.fs.remove('lib/main.dart');
+      await project.fs.append('lib/main.dart', kFormattedDart);
 
       // Run lint_staged to automatically format the file and commit formatted files
       await project.gitCommit();
@@ -145,8 +142,7 @@ void main() {
       expect(await project.git.status(), contains('nothing added to commit'));
 
       // File is pretty, and has been edited
-      expect(
-          await project.fs.readFile('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
 
     test('runs chunked tasks when necessary', () async {
@@ -154,12 +150,12 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // Stage two files
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
-      await project.fs.writeFile('lib/foo.dart', kFormattedDart);
+      await project.fs.write('lib/foo.dart', kFormattedDart);
       await project.git.run(['add', 'lib/foo.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
@@ -171,9 +167,8 @@ void main() {
           equals('2'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(
-          await project.fs.readFile('lib/main.dart'), equals(kFormattedDart));
-      expect(await project.fs.readFile('lib/foo.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/foo.dart'), equals(kFormattedDart));
     });
 
     test('fails when backup stash is missing', () async {
@@ -183,10 +178,10 @@ void main() {
       final config = '''lint_staged:
   'lib/**.dart': git stash drop
 ''';
-      await project.fs.writeFile('pubspec.yaml', config);
+      await project.fs.write('pubspec.yaml', config);
 
       // Stage two files
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
@@ -198,13 +193,13 @@ void main() {
       final project = IntegrationProject();
       print('dir: ${project.path}');
       await project.setup();
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // create a new branch called stash
       await project.git.run(['branch', 'stash']);
 
       // Stage two files
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted file
@@ -215,8 +210,7 @@ void main() {
           equals('2'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(
-          await project.fs.readFile('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
   });
 }

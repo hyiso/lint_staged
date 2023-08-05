@@ -1,9 +1,6 @@
 import 'dart:io';
 
-import 'package:verbose/verbose.dart';
-
 import 'src/context.dart';
-import 'src/exception.dart';
 import 'src/logging.dart';
 import 'src/message.dart';
 import 'src/run.dart';
@@ -26,41 +23,39 @@ Future<bool> lintStaged({
   int maxArgLength = 0,
 }) async {
   try {
-    final spinner = Spinner();
     final ctx = await runAll(
         allowEmpty: allowEmpty,
         diff: diff,
         diffFilter: diffFilter,
         stash: stash,
         maxArgLength: maxArgLength,
-        workingDirectory: workingDirectory,
-        spinner: spinner);
+        workingDirectory: workingDirectory);
     _printTaskOutput(ctx);
     return true;
   } catch (e) {
-    final verbose = Verbose('lint_staged');
-    if (e is LintStagedException && e.ctx.errors.isNotEmpty) {
-      if (e.ctx.errors.contains(kConfigNotFoundError)) {
-        verbose(kNoConfigurationMsg);
-      } else if (e.ctx.errors.contains(kApplyEmptyCommitError)) {
-        verbose(kPreventedEmptyCommitMsg);
-      } else if (e.ctx.errors.contains(kGitError) &&
-          !e.ctx.errors.contains(kGetBackupStashError)) {
-        verbose(kGitErrorMsg);
-        if (e.ctx.shouldBackup) {
+    if (e is Context) {
+      if (e.errors.contains(kConfigNotFoundError)) {
+        stdout.error(kNoConfigurationMsg);
+      } else if (e.errors.contains(kApplyEmptyCommitError)) {
+        stdout.warn(kPreventedEmptyCommitMsg);
+      } else if (e.errors.contains(kGitError) &&
+          !e.errors.contains(kGetBackupStashError)) {
+        stdout.failed(kGitErrorMsg);
+        if (e.shouldBackup) {
           // No sense to show this if the backup stash itself is missing.
-          verbose(kRestoreStashExampleMsg);
+          stdout.error(kRestoreStashExampleMsg);
         }
       }
-      _printTaskOutput(e.ctx);
+      _printTaskOutput(e);
+      return false;
     }
-    return false;
+    rethrow;
   }
 }
 
-void _printTaskOutput(LintStagedContext ctx) {
+void _printTaskOutput(Context ctx) {
   if (ctx.output.isEmpty) return;
-  final log = ctx.errors.isNotEmpty ? stderr.failed : stdout.success;
+  final log = ctx.errors.isNotEmpty ? stdout.failed : stdout.success;
   for (var line in ctx.output) {
     log(line);
   }

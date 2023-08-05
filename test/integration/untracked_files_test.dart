@@ -11,15 +11,15 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.append('pubspec.yaml', kConfigFormatExit);
       // Stage pretty file
-      await project.fs.appendFile('lib/main.dart', kFormattedDart);
+      await project.fs.append('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Add untracked files
-      await project.fs.appendFile('lib/untracked.dart', kFormattedDart);
-      await project.fs.appendFile('.gitattributes', 'binary\n');
-      await project.fs.writeFile('binary', 'Hello, World!');
+      await project.fs.append('lib/untracked.dart', kFormattedDart);
+      await project.fs.append('.gitattributes', 'binary\n');
+      await project.fs.write('binary', 'Hello, World!');
 
       // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
       await project.gitCommit();
@@ -29,27 +29,26 @@ void main() {
           equals('2'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
       expect(
-          await project.fs.readFile('lib/main.dart'), equals(kFormattedDart));
-      expect(await project.fs.readFile('lib/untracked.dart'),
-          equals(kFormattedDart));
-      expect(await project.fs.readFile('binary'), equals('Hello, World!'));
+          await project.fs.read('lib/untracked.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('binary'), equals('Hello, World!'));
     });
     test('ingores untracked files when task fails', () async {
       final project = IntegrationProject();
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.append('pubspec.yaml', kConfigFormatExit);
 
       // Stage unfixable file
-      await project.fs.appendFile('lib/main.dart', kInvalidDart);
+      await project.fs.append('lib/main.dart', kInvalidDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       // Add untracked files
-      await project.fs.appendFile('lib/untracked.dart', kFormattedDart);
-      await project.fs.appendFile('.gitattributes', 'binary\n');
-      await project.fs.writeFile('binary', 'Hello, World!');
+      await project.fs.append('lib/untracked.dart', kFormattedDart);
+      await project.fs.append('.gitattributes', 'binary\n');
+      await project.fs.write('binary', 'Hello, World!');
 
       // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
       expectLater(project.gitCommit(), throwsException);
@@ -59,10 +58,10 @@ void main() {
           equals('1'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('initial commit'));
-      expect(await project.fs.readFile('lib/main.dart'), equals(kInvalidDart));
-      expect(await project.fs.readFile('lib/untracked.dart'),
-          equals(kFormattedDart));
-      expect(await project.fs.readFile('binary'), equals('Hello, World!'));
+      expect(await project.fs.read('lib/main.dart'), equals(kInvalidDart));
+      expect(
+          await project.fs.read('lib/untracked.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('binary'), equals('Hello, World!'));
     });
   });
 }

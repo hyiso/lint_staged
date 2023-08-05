@@ -19,29 +19,29 @@ void main() {
 
       // Create one branch
       await project.git.run(['checkout', '-b', 'branch-a']);
-      await project.fs.appendFile('lib/main.dart', fileInBranchA);
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('lib/main.dart', fileInBranchA);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
       await project.git.run(['add', '.']);
 
       await project.gitCommit(gitCommitArgs: ['-m commit a']);
 
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchA));
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
 
       await project.git.run(['checkout', defaultBranch]);
 
       // Create another branch
       await project.git.run(['checkout', '-b', 'branch-b']);
-      await project.fs.appendFile('lib/main.dart', fileInBranchB);
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('lib/main.dart', fileInBranchB);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
       await project.git.run(['add', '.']);
       await project.gitCommit(gitCommitArgs: ['-m commit b']);
-      expect(await project.fs.readFile('lib/main.dart'),
-          equals(fileInBranchBFixed));
+      expect(
+          await project.fs.read('lib/main.dart'), equals(fileInBranchBFixed));
 
       // Merge first branch
       await project.git.run(['checkout', defaultBranch]);
       await project.git.run(['merge', 'branch-a']);
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchA));
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('commit a'));
 
@@ -50,7 +50,7 @@ void main() {
       await expectLater(merge, throwsException);
 
       expect(
-          await project.fs.readFile('lib/main.dart'),
+          await project.fs.read('lib/main.dart'),
           contains('<<<<<<< HEAD\n'
               'String foo = "foo";\n'
               '=======\n'
@@ -59,8 +59,8 @@ void main() {
               ''));
 
       // Fix conflict and commit using lint_staged
-      await project.fs.writeFile('lib/main.dart', fileInBranchB);
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchB));
+      await project.fs.write('lib/main.dart', fileInBranchB);
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchB));
       await project.git.run(['add', '.']);
 
       await project.gitCommit(gitCommitArgs: ['--no-edit']);
@@ -72,8 +72,8 @@ void main() {
       expect(log, contains('Merge branch \'branch-b\''));
       expect(log, contains('Conflicts:'));
       expect(log, contains('lib/main.dart'));
-      expect(await project.fs.readFile('lib/main.dart'),
-          equals(fileInBranchBFixed));
+      expect(
+          await project.fs.read('lib/main.dart'), equals(fileInBranchBFixed));
     });
     test('handles merge conflict when task errors', () async {
       final project = IntegrationProject();
@@ -89,29 +89,29 @@ void main() {
 
       // Create one branch
       await project.git.run(['checkout', '-b', 'branch-a']);
-      await project.fs.appendFile('lib/main.dart', fileInBranchA);
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('lib/main.dart', fileInBranchA);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
       await project.git.run(['add', '.']);
 
       await project.gitCommit(gitCommitArgs: ['-m commit a']);
 
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchA));
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
 
       await project.git.run(['checkout', defaultBranch]);
 
       // Create another branch
       await project.git.run(['checkout', '-b', 'branch-b']);
-      await project.fs.appendFile('lib/main.dart', fileInBranchB);
-      await project.fs.appendFile('pubspec.yaml', kConfigFormatFix);
+      await project.fs.append('lib/main.dart', fileInBranchB);
+      await project.fs.append('pubspec.yaml', kConfigFormatFix);
       await project.git.run(['add', '.']);
       await project.gitCommit(gitCommitArgs: ['-m commit b']);
-      expect(await project.fs.readFile('lib/main.dart'),
-          equals(fileInBranchBFixed));
+      expect(
+          await project.fs.read('lib/main.dart'), equals(fileInBranchBFixed));
 
       // Merge first branch
       await project.git.run(['checkout', defaultBranch]);
       await project.git.run(['merge', 'branch-a']);
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchA));
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
           contains('commit a'));
 
@@ -120,7 +120,7 @@ void main() {
           project.git.run(['merge', 'branch-b']), throwsException);
 
       expect(
-          await project.fs.readFile('lib/main.dart'),
+          await project.fs.read('lib/main.dart'),
           contains('<<<<<<< HEAD\n'
               'String foo = "foo";\n'
               '=======\n'
@@ -129,11 +129,11 @@ void main() {
               ''));
 
       // Fix conflict and commit using lint_staged
-      await project.fs.writeFile('lib/main.dart', fileInBranchB);
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchB));
+      await project.fs.write('lib/main.dart', fileInBranchB);
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchB));
       await project.git.run(['add', '.']);
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       await expectLater(project.gitCommit(), throwsException);
 
@@ -142,7 +142,7 @@ void main() {
           equals('2'));
       expect(await project.git.status(),
           contains('All conflicts fixed but you are still merging'));
-      expect(await project.fs.readFile('lib/main.dart'), equals(fileInBranchB));
+      expect(await project.fs.read('lib/main.dart'), equals(fileInBranchB));
     });
   });
 }

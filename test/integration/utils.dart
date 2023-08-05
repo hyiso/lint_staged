@@ -33,7 +33,7 @@ class IntegrationProject {
   }
 
   Future<void> _initialCommit() async {
-    await fs.appendFile('README.md', '# Test\n');
+    await fs.append('README.md', '# Test\n');
     await git.run(['add', 'README.md']);
     await git.run(['commit', '-m initial commit']);
   }

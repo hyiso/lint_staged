@@ -1,11 +1,11 @@
 import 'dart:io';
 
+import 'package:ansi/ansi.dart';
 import 'package:lint_staged/src/fs.dart';
 import 'package:verbose/verbose.dart';
 
 import 'chunk.dart';
 import 'config.dart';
-import 'exception.dart';
 import 'git.dart';
 import 'group.dart';
 import 'workflow.dart';
@@ -16,25 +16,23 @@ import 'symbols.dart';
 
 final _verbose = Verbose('lint_staged:run');
 
-Future<LintStagedContext> runAll({
+Future<Context> runAll({
   bool allowEmpty = false,
-  required List<String> diff,
+  List<String> diff = const [],
   String? diffFilter,
   bool stash = true,
   String? workingDirectory,
   int maxArgLength = 0,
-  required Spinner spinner,
 }) async {
   final ctx = getInitialContext();
-  if (!FileSystemEntity.isDirectorySync('.git') &&
-      !FileSystemEntity.isFileSync('.git')) {
+  final fs = FileSystem(workingDirectory);
+  if (!await fs.exists('.git')) {
     ctx.output.add(kNotGitRepoMsg);
     ctx.errors.add(kGitRepoError);
-    throw createError(ctx, kNotGitRepoMsg);
+    throw ctx;
   }
   final git = Git(
       diff: diff, diffFilter: diffFilter, workingDirectory: workingDirectory);
-  final fs = FileSystem(workingDirectory);
 
   /// Test whether we have any commits or not.
   /// Stashing must be disabled with no initial commit.
@@ -44,7 +42,12 @@ Future<LintStagedContext> runAll({
   /// and when using the default list of staged files by default
   ctx.shouldBackup = hasInitialCommit && stash;
   if (!ctx.shouldBackup) {
-    stderr.warn(skippingBackupMsg(hasInitialCommit, diff));
+    final reason = diff.isNotEmpty
+        ? '`--diff` was used'
+        : hasInitialCommit
+            ? '`--no-stash` was used'
+            : 'there\'s no initial commit yet';
+    stdout.warn('Skipping backup because $reason.');
   }
   final stagedFiles = await git.stagedFiles;
   if (stagedFiles.isEmpty) {
@@ -54,7 +57,7 @@ Future<LintStagedContext> runAll({
   final config = await loadConfig(workingDirectory: workingDirectory);
   if (config == null || config.isEmpty) {
     ctx.errors.add(kConfigNotFoundError);
-    throw createError(ctx, kNoConfigurationMsg);
+    throw ctx;
   }
   final groups = groupFilesByConfig(config: config, files: stagedFiles);
   if (groups.isEmpty) {
@@ -67,16 +70,18 @@ Future<LintStagedContext> runAll({
       chunkFiles(matchedFiles, maxArgLength: maxArgLength);
   final workflow = Workflow(
     fs: fs,
+    ctx: ctx,
     git: git,
     allowEmpty: allowEmpty,
     matchedFileChunks: matchedFileChunks,
   );
+  final spinner = Spinner();
   spinner.progress('Preparing lint_staged...');
-  await workflow.prepare(ctx);
+  await workflow.prepare();
   spinner.success('Prepared lint_staged');
   if (ctx.hasPartiallyStagedFiles) {
     spinner.progress('Hiding unstaged changes to partially staged files...');
-    await workflow.hideUnstagedChanges(ctx);
+    await workflow.hideUnstagedChanges();
     spinner.success('Hide unstaged changes to partially staged files');
   }
   spinner.progress('Running tasks for staged files...');
@@ -89,7 +94,7 @@ Future<LintStagedContext> runAll({
             workingDirectory: workingDirectory);
         final messsages = ['$script $file'];
         if (result.stderr.toString().trim().isNotEmpty) {
-          messsages.add(result.stderr.toString().trim());
+          messsages.add(ansi.red(result.stderr.toString().trim()));
         }
         if (result.stdout.toString().trim().isNotEmpty) {
           messsages.add(result.stdout.toString().trim());
@@ -105,26 +110,26 @@ Future<LintStagedContext> runAll({
   spinner.success('Running tasks for staged files');
   if (!applyModifationsSkipped(ctx)) {
     spinner.progress('Applying modifications from tasks...');
-    await workflow.applyModifications(ctx);
+    await workflow.applyModifications();
     spinner.success('Applied modifications from tasks');
   }
   if (ctx.hasPartiallyStagedFiles && !restoreUnstagedChangesSkipped(ctx)) {
     spinner.progress('Restoring unstaged changes to partially staged files...');
-    await workflow.resotreUnstagedChanges(ctx);
+    await workflow.resotreUnstagedChanges();
     spinner.success('Restored unstaged changes to partially staged files');
   }
   if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
     spinner.progress('Reverting to original state because of errors...');
-    await workflow.restoreOriginState(ctx);
+    await workflow.restoreOriginState();
     spinner.success('Reverted to original state because of errors');
   }
   if (cleanupEnabled(ctx) && !cleanupSkipped(ctx)) {
     spinner.progress('Cleaning up temporary files...');
-    await workflow.cleanup(ctx);
+    await workflow.cleanup();
     spinner.success('Cleaned up temporary files');
   }
   if (ctx.errors.isNotEmpty) {
-    throw createError(ctx);
+    throw ctx;
   }
   return ctx;
 }

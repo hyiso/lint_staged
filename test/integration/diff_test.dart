@@ -12,10 +12,10 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // Commit unformatted file
-      await project.fs.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.write('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', '.']);
       await project.git.run(['commit', '-m unformatted']);
 
@@ -40,10 +40,10 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // Stage unformatted file
-      await project.fs.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.write('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', '.']);
 
       // Run lint_staged with `--diff-filter=D` to include only deleted files.

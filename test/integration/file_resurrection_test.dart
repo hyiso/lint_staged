@@ -12,16 +12,15 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
-      await project.fs
-          .removeFile('README.md'); // Remove file from previous commit
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.remove('README.md'); // Remove file from previous commit
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       await project.gitCommit();
 
-      expect(await project.fs.existsFile('README.md'), isFalse);
+      expect(await project.fs.exists('README.md'), isFalse);
     });
 
     test('does not resurrect removed files in complex case', () async {
@@ -29,20 +28,20 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
       // Add file to index, and remove it from disk
-      await project.fs.writeFile('lib/main.dart', kFormattedDart);
+      await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
-      await project.fs.removeFile('lib/main.dart');
+      await project.fs.remove('lib/main.dart');
 
       // Rename file in index, and remove it from disk
-      final readme = await project.fs.readFile('README.md');
-      await project.fs.removeFile('README.md');
+      final readme = await project.fs.read('README.md');
+      await project.fs.remove('README.md');
       await project.git.run(['add', 'README.md']);
-      await project.fs.writeFile('README_NEW.md', readme!);
+      await project.fs.write('README_NEW.md', readme!);
       await project.git.run(['add', 'README_NEW.md']);
-      await project.fs.removeFile('README_NEW.md');
+      await project.fs.remove('README_NEW.md');
 
       expect(
           await project.git.status(['--porcelain']),
@@ -58,8 +57,8 @@ void main() {
               ' D lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      expect(await project.fs.existsFile('lib/main.dart'), isFalse);
-      expect(await project.fs.existsFile('README_NEW.md'), isFalse);
+      expect(await project.fs.exists('lib/main.dart'), isFalse);
+      expect(await project.fs.exists('README_NEW.md'), isFalse);
     });
 
     test('does not resurrect removed files due to git bug when tasks fail',
@@ -68,11 +67,10 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      await project.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
-      await project.fs
-          .removeFile('README.md'); // Remove file from previous commit
-      await project.fs.writeFile('lib/main.dart', kUnFormattedDart);
+      await project.fs.remove('README.md'); // Remove file from previous commit
+      await project.fs.write('lib/main.dart', kUnFormattedDart);
       await project.git.run(['add', 'lib/main.dart']);
 
       expect(
@@ -89,7 +87,7 @@ void main() {
               'A  lib/main.dart\n'
               '?? pubspec.yaml'));
 
-      expect(await project.fs.existsFile('README.md'), isFalse);
+      expect(await project.fs.exists('README.md'), isFalse);
     });
   });
 }
