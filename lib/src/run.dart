@@ -36,7 +36,7 @@ Future<Context> runAll({
 
   /// Test whether we have any commits or not.
   /// Stashing must be disabled with no initial commit.
-  final hasInitialCommit = await git.hasInitialCommit;
+  final hasInitialCommit = (await git.lastCommit).isNotEmpty;
 
   /// lint_staged will create a backup stash only when there's an initial commit,
   /// and when using the default list of staged files by default

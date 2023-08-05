@@ -24,14 +24,12 @@ void main() {
       await project.gitCommit();
 
       // Nothing is wrong, so a new commit is created and file is pretty
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
 
       // Latest commit contains pretty file
       // `git show` strips empty line from here here
-      expect(await project.git.stdout(['show', 'HEAD:lib/main.dart']),
+      expect(await project.git.show(['HEAD:lib/main.dart']),
           equals(kFormattedDart.trim()));
 
       // Since edit was not staged, the file is still modified
@@ -62,14 +60,12 @@ void main() {
       await project.gitCommit();
 
       // Nothing is wrong, so a new commit is created and file is pretty
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
 
       // Latest commit contains pretty file
       // `git show` strips empty line from here here
-      expect(await project.git.stdout(['show', 'HEAD:lib/main.dart']),
+      expect(await project.git.show(['HEAD:lib/main.dart']),
           equals(kFormattedDart.trim()));
 
       // Nothing is staged
@@ -103,11 +99,9 @@ void main() {
       await expectLater(project.gitCommit(), throwsException);
 
       // Something was wrong so the repo is returned to original state
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('1'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('initial commit'));
-      expect(await project.git.stdout(['status']), equals(status));
+      expect(await project.git.commitCount, equals(1));
+      expect(await project.git.lastCommit, contains('initial commit'));
+      expect(await project.git.status(), equals(status));
       expect(await project.fs.read('lib/main.dart'),
           equals(kUnFormattedDart + appended));
     });
@@ -132,10 +126,8 @@ void main() {
       await expectLater(project.gitCommit(), throwsException);
 
       // Something was wrong so the repo is returned to original state
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('1'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('initial commit'));
+      expect(await project.git.commitCount, equals(1));
+      expect(await project.git.lastCommit, contains('initial commit'));
       expect(await project.git.status(), equals(status));
       expect(await project.fs.read('lib/main.dart'),
           equals(kInvalidDart + appended));

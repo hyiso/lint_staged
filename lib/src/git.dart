@@ -9,10 +9,11 @@ final _verbose = Verbose('lit_staged:git');
 
 class Git {
   final String? workingDirectory;
-  final List<String> diff;
+  final List<String> _diff;
   final String? diffFilter;
 
-  Git({this.workingDirectory, this.diff = const [], this.diffFilter});
+  Git({this.workingDirectory, List<String> diff = const [], this.diffFilter})
+      : _diff = diff;
 
   String? _gitdir;
   String get gitdir =>
@@ -22,8 +23,22 @@ class Git {
           .toString()
           .trim();
 
+  String? _currentBranch;
+  String get currentBranch => _currentBranch ??= Process.runSync(
+          'git', ['rev-parse', '--abbrev-ref', 'HEAD'],
+          workingDirectory: workingDirectory)
+      .stdout
+      .toString()
+      .trim();
+
   Future<String> status([List<String> args = const []]) async =>
-      stdout(['status', ...args]);
+      _stdout(['status', ...args]);
+
+  Future<String> show([List<String> args = const []]) async =>
+      _stdout(['show', ...args]);
+
+  Future<String> diff([List<String> args = const []]) async =>
+      _stdout(['diff', ...args]);
 
   Future<ProcessResult> run(List<String> args) async {
     final result = await Process.run('git', [..._kNoSubmoduleRecurse, ...args],
@@ -43,7 +58,7 @@ class Git {
     return result;
   }
 
-  Future<String> stdout(List<String> args) async {
+  Future<String> _stdout(List<String> args) async {
     final result = await run(args);
     String output = result.stdout as String;
     if (output.endsWith('\n')) {
@@ -53,8 +68,8 @@ class Git {
   }
 
   Future<List<String>> get stagedFiles async {
-    final args = getDiffArgs(diff: diff, diffFilter: diffFilter);
-    final output = await stdout(args);
+    final args = getDiffArgs(diff: _diff, diffFilter: diffFilter);
+    final output = await _stdout(args);
     final files = parseGitZOutput(output).map((e) => normalize(e)).toList();
     _verbose('Staged files: $files');
     return files;
@@ -66,7 +81,7 @@ class Git {
   /// both the "from" and "to" filenames, where "from" is no longer on disk.
   ///
   Future<List<String>> get partiallyStagedFiles async {
-    final status = await stdout(['status', '-z']);
+    final status = await _stdout(['status', '-z']);
     if (status.isEmpty) {
       return [];
     }
@@ -104,20 +119,28 @@ class Git {
     return files;
   }
 
-  Future<bool> get hasInitialCommit async {
-    try {
-      return (await stdout(['log', '-1'])).trim().isNotEmpty;
-    } catch (_) {}
-    return true;
+  Future<String> get lastCommit async {
+    final output = await _stdout(['log', '-1', '--pretty=%B']);
+    return output.trim();
   }
 
-  Future<int> getStashMessageIndex(String message) async {
-    final stashes = await stdout(['stash', 'list']);
-    return stashes.split('\n').indexWhere((line) => line.contains(message));
+  Future<int> get commitCount async {
+    final output = await _stdout(['rev-list', '--count', 'HEAD']);
+    return int.parse(output.trim());
+  }
+
+  Future<List<String>> get hashes async {
+    final output = await _stdout(['log', '--format=format:%H']);
+    return output.trim().split('\n');
+  }
+
+  Future<List<String>> get stashes async {
+    final output = await _stdout(['stash', 'list']);
+    return output.trim().split('\n');
   }
 
   Future<List<String>> get deletedFiles async {
-    final output = await stdout(['ls-files', '--deleted']);
+    final output = await _stdout(['ls-files', '--deleted']);
     final files =
         output.split('\n').where((line) => line.trim().isNotEmpty).toList();
     _verbose('Deleted files: $files');
@@ -126,13 +149,13 @@ class Git {
 
   /// The `stash create` command creates a dangling commit without removing any files,
   Future<String> createStash() async {
-    final output = await stdout(['stash', 'create']);
+    final output = await _stdout(['stash', 'create']);
     return output.trim();
   }
 
   Future<String> storeStash(String stash, {required String message}) async {
     final output =
-        await stdout(['stash', 'store', '--quiet', '-m', message, stash]);
+        await _stdout(['stash', 'store', '--quiet', '-m', message, stash]);
     return output.trim();
   }
 }

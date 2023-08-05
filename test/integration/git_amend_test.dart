@@ -25,10 +25,8 @@ void main() {
       await project.gitCommit(gitCommitArgs: ['--amend', '--no-edit']);
 
       // Nothing is wrong, so the commit was amended
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('1'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('initial commit'));
+      expect(await project.git.commitCount, equals(1));
+      expect(await project.git.lastCommit, contains('initial commit'));
       expect(
           await project.fs.read('README.md'),
           contains('# Test\n'

@@ -27,10 +27,8 @@ void main() {
       await worktreeProject.gitCommit();
 
       // Nothing is wrong, so a new commit is created
-      expect(await worktreeProject.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await worktreeProject.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await worktreeProject.git.commitCount, equals(2));
+      expect(await worktreeProject.git.lastCommit, contains('test'));
       expect(await worktreeProject.fs.read('lib/main.dart'),
           equals(kFormattedDart));
     });

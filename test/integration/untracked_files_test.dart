@@ -25,10 +25,8 @@ void main() {
       await project.gitCommit();
 
       // Nothing is wrong, so a new commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
       expect(
           await project.fs.read('lib/untracked.dart'), equals(kFormattedDart));
@@ -54,10 +52,8 @@ void main() {
       expectLater(project.gitCommit(), throwsException);
 
       // Something was wrong so the repo is returned to original state
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('1'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('initial commit'));
+      expect(await project.git.commitCount, equals(1));
+      expect(await project.git.lastCommit, contains('initial commit'));
       expect(await project.fs.read('lib/main.dart'), equals(kInvalidDart));
       expect(
           await project.fs.read('lib/untracked.dart'), equals(kFormattedDart));

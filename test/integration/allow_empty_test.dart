@@ -31,10 +31,9 @@ void main() {
       await expectLater(project.gitCommit(), throwsException);
 
       // Something was wrong so the repo is returned to original state
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('committed formatted file'));
+      expect(await project.git.commitCount, equals(2));
+      expect(
+          await project.git.lastCommit, contains('committed formatted file'));
       expect(await project.fs.read('lib/main.dart'), equals(kUnFormattedDart));
     });
 
@@ -66,11 +65,9 @@ void main() {
           completes);
 
       // Nothing was wrong so the empty commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('3'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
-      expect(await project.git.stdout(['diff', '-1']), equals(''));
+      expect(await project.git.commitCount, equals(3));
+      expect(await project.git.lastCommit, contains('test'));
+      expect(await project.git.diff(['-1']), equals(''));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
   });

@@ -56,10 +56,8 @@ void main() {
       await expectLater(submoduleProject.gitCommit(), completes);
 
       /// Nothing is wrong, so a new commit is created
-      expect(await submoduleProject.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await submoduleProject.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await submoduleProject.git.commitCount, equals(2));
+      expect(await submoduleProject.git.lastCommit, contains('test'));
       expect(await submoduleProject.fs.read('lib/main.dart'),
           equals(kFormattedDart));
 

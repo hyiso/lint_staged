@@ -19,9 +19,7 @@ void main() {
       await project.git.run(['add', '.']);
       await project.git.run(['commit', '-m unformatted']);
 
-      final hashes = (await project.git.stdout(['log', '--format=format:%H']))
-          .trim()
-          .split('\n');
+      final hashes = await project.git.hashes;
       expect(hashes.length, 2);
 
       // Run lint_staged with `--diff` between the two commits.

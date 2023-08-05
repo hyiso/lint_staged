@@ -21,10 +21,8 @@ void main() {
       await project.gitCommit();
 
       // Nothing is wrong, so a new commit created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
 
@@ -47,10 +45,8 @@ void main() {
       await project.gitCommit();
 
       // Nothing was wrong so the empty commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
       expect(await project.fs.read('lib/foo.dart'), equals(kFormattedDart));
     });
@@ -72,10 +68,8 @@ void main() {
       await expectLater(project.gitCommit(), throwsException);
 
       // Nothing was wrong so the empty commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('1'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('initial commit'));
+      expect(await project.git.commitCount, equals(1));
+      expect(await project.git.lastCommit, contains('initial commit'));
       expect(await project.git.status(), equals(status));
       expect(await project.fs.read('lib/main.dart'), equals(kUnFormattedDart));
     });
@@ -98,10 +92,8 @@ void main() {
       await expectLater(project.gitCommit(), throwsException);
 
       // Nothing was wrong so the empty commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('1'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('initial commit'));
+      expect(await project.git.commitCount, equals(1));
+      expect(await project.git.lastCommit, contains('initial commit'));
       expect(await project.git.status(), equals(status));
       expect(await project.fs.read('lib/main.dart'), equals(kInvalidDart));
     });
@@ -128,14 +120,12 @@ void main() {
       await project.gitCommit();
 
       // Nothing was wrong so the empty commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
 
       // Latest commit contains pretty file
       // `git show` strips empty line from here here
-      expect(await project.git.stdout(['show', 'HEAD:lib/main.dart']),
+      expect(await project.git.show(['HEAD:lib/main.dart']),
           equals(kFormattedDart.trim()));
 
       // Nothing is staged
@@ -163,10 +153,8 @@ void main() {
       await project.gitCommit(maxArgLength: 10);
 
       // Nothing was wrong so the empty commit is created
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
       expect(await project.fs.read('lib/foo.dart'), equals(kFormattedDart));
     });
@@ -206,10 +194,8 @@ void main() {
       await project.gitCommit();
 
       // Nothing is wrong, so a new commit is created and file is pretty
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('test'));
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
   });

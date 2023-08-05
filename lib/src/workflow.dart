@@ -87,7 +87,8 @@ class Workflow {
   /// Get name of backup stash
   ///
   Future<String> getBackupStash() async {
-    final index = await git.getStashMessageIndex(_kStashMessage);
+    final stashes = await git.stashes;
+    final index = stashes.indexWhere((line) => line.contains(_kStashMessage));
     if (index == -1) {
       ctx.errors.add(kGetBackupStashError);
       throw Exception('lint_staged automatic backup is missing!');

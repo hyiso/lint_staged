@@ -10,8 +10,7 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      final defaultBranch =
-          await project.git.stdout(['rev-parse', '--abbrev-ref', 'HEAD']);
+      final branch = project.git.currentBranch;
 
       final fileInBranchA = 'String foo = "foo";\n';
       final fileInBranchB = 'String foo="bar";\n';
@@ -27,7 +26,7 @@ void main() {
 
       expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
 
-      await project.git.run(['checkout', defaultBranch]);
+      await project.git.run(['checkout', branch]);
 
       // Create another branch
       await project.git.run(['checkout', '-b', 'branch-b']);
@@ -39,11 +38,10 @@ void main() {
           await project.fs.read('lib/main.dart'), equals(fileInBranchBFixed));
 
       // Merge first branch
-      await project.git.run(['checkout', defaultBranch]);
+      await project.git.run(['checkout', branch]);
       await project.git.run(['merge', 'branch-a']);
       expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('commit a'));
+      expect(await project.git.lastCommit, contains('commit a'));
 
       // Merge second branch, causing merge conflict
       final merge = project.git.run(['merge', 'branch-b']);
@@ -66,9 +64,8 @@ void main() {
       await project.gitCommit(gitCommitArgs: ['--no-edit']);
 
       // Nothing is wrong, so a new commit is created and file is pretty
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('4'));
-      final log = await project.git.stdout(['log', '-1', '--pretty=%B']);
+      expect(await project.git.commitCount, equals(4));
+      final log = await project.git.lastCommit;
       expect(log, contains('Merge branch \'branch-b\''));
       expect(log, contains('Conflicts:'));
       expect(log, contains('lib/main.dart'));
@@ -80,8 +77,7 @@ void main() {
       print('dir: ${project.path}');
       await project.setup();
 
-      final defaultBranch =
-          await project.git.stdout(['rev-parse', '--abbrev-ref', 'HEAD']);
+      final branch = project.git.currentBranch;
 
       final fileInBranchA = 'String foo = "foo";\n';
       final fileInBranchB = 'String foo="bar";\n';
@@ -97,7 +93,7 @@ void main() {
 
       expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
 
-      await project.git.run(['checkout', defaultBranch]);
+      await project.git.run(['checkout', branch]);
 
       // Create another branch
       await project.git.run(['checkout', '-b', 'branch-b']);
@@ -109,11 +105,10 @@ void main() {
           await project.fs.read('lib/main.dart'), equals(fileInBranchBFixed));
 
       // Merge first branch
-      await project.git.run(['checkout', defaultBranch]);
+      await project.git.run(['checkout', branch]);
       await project.git.run(['merge', 'branch-a']);
       expect(await project.fs.read('lib/main.dart'), equals(fileInBranchA));
-      expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('commit a'));
+      expect(await project.git.lastCommit, contains('commit a'));
 
       // Merge second branch, causing merge conflict
       await expectLater(
@@ -138,8 +133,7 @@ void main() {
       await expectLater(project.gitCommit(), throwsException);
 
       // Something went wrong, so lintStaged failed and merge is still going
-      expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
-          equals('2'));
+      expect(await project.git.commitCount, equals(2));
       expect(await project.git.status(),
           contains('All conflicts fixed but you are still merging'));
       expect(await project.fs.read('lib/main.dart'), equals(fileInBranchB));
