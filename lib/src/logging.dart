@@ -39,7 +39,7 @@ final _isTest = basename(io.Platform.script.path).startsWith('test.dart');
 
 class Spinner {
   final Stopwatch _stopwatch;
-  late Timer _timer;
+  Timer? _timer;
   _SpinnerFrame? _frame;
   late int _lineCount;
 
@@ -60,7 +60,8 @@ class Spinner {
 
   void success(String message) {
     _stop();
-    io.stdout.writeln('${ansi.green(_Figures.success)} $message');
+    io.stdout.writeln(
+        '${ansi.green(_Figures.success)} ${message.padRight(40)}${elapsed.inMilliseconds}ms');
   }
 
   void skipped(String message) {
@@ -85,10 +86,11 @@ class Spinner {
     if (Verbose.enabled || _isTest) {
       return;
     }
-    io.stdout.write(ansiEscapes.eraseLines(_lineCount));
-    _stopwatch.stop();
-    if (_timer.isActive) {
-      _timer.cancel();
+    if (_timer != null) {
+      io.stdout.write(ansiEscapes.eraseLines(_lineCount));
+      _stopwatch.stop();
+      _timer?.cancel();
+      _timer = null;
     }
   }
 }

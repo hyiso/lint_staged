@@ -61,7 +61,7 @@ Future<Context> runAll({
   }
   final groups = groupFilesByConfig(config: config, files: stagedFiles);
   if (groups.isEmpty) {
-    _verbose(kNoStagedFilesMatchedMsg);
+    ctx.output.add(kNoStagedFilesMatchedMsg);
     return ctx;
   }
   final matchedFiles =
@@ -80,11 +80,13 @@ Future<Context> runAll({
   await workflow.prepare();
   spinner.success('Prepared lint_staged');
   if (ctx.hasPartiallyStagedFiles) {
-    spinner.progress('Hiding unstaged changes to partially staged files...');
+    spinner.progress('Hide unstaged changes...');
     await workflow.hideUnstagedChanges();
-    spinner.success('Hide unstaged changes to partially staged files');
+    spinner.success('Hide unstaged changes');
+  } else {
+    spinner.skipped('Hide unstaged changes');
   }
-  spinner.progress('Running tasks for staged files...');
+  spinner.progress('Run tasks for staged files...');
   await Future.wait(groups.values.map((group) async {
     await Future.wait(group.scripts.map((script) async {
       final args = script.split(' ');
@@ -107,26 +109,34 @@ Future<Context> runAll({
       }));
     }));
   }));
-  spinner.success('Running tasks for staged files');
+  spinner.success('Run tasks for staged files');
   if (!applyModifationsSkipped(ctx)) {
-    spinner.progress('Applying modifications from tasks...');
+    spinner.progress('Apply modifications...');
     await workflow.applyModifications();
-    spinner.success('Applied modifications from tasks');
+    spinner.success('Apply modifications');
+  } else {
+    spinner.skipped('Apply modifications');
   }
   if (ctx.hasPartiallyStagedFiles && !restoreUnstagedChangesSkipped(ctx)) {
-    spinner.progress('Restoring unstaged changes to partially staged files...');
+    spinner.progress('Restore unstaged changes...');
     await workflow.resotreUnstagedChanges();
-    spinner.success('Restored unstaged changes to partially staged files');
+    spinner.success('Restore unstaged changes');
+  } else {
+    spinner.skipped('Restore unstaged changes');
   }
   if (restoreOriginalStateEnabled(ctx) && !restoreOriginalStateSkipped(ctx)) {
-    spinner.progress('Reverting to original state because of errors...');
+    spinner.progress('Revert because of errors...');
     await workflow.restoreOriginState();
-    spinner.success('Reverted to original state because of errors');
+    spinner.success('Revert because of errors');
+  } else {
+    spinner.skipped('Revert because of errors');
   }
   if (cleanupEnabled(ctx) && !cleanupSkipped(ctx)) {
-    spinner.progress('Cleaning up temporary files...');
+    spinner.progress('Cleanup temporary files...');
     await workflow.cleanup();
-    spinner.success('Cleaned up temporary files');
+    spinner.success('Cleanup temporary files');
+  } else {
+    spinner.skipped('Cleanup temporary files');
   }
   if (ctx.errors.isNotEmpty) {
     throw ctx;

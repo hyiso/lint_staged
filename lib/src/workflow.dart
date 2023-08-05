@@ -60,7 +60,6 @@ class Workflow {
 
   late List<String> _partiallyStagedFiles;
   late List<String> _deletedFiles;
-  late bool _nothingToStash;
 
   ///
   /// These three files hold state about an ongoing git merge
@@ -100,20 +99,17 @@ class Workflow {
   /// Save meta information about ongoing git merge
   ///
   Future<void> backupMergeStatus() async {
-    _verbose('Backing up merge state...');
     await Future.wait([
       fs.read(_mergeHeadFilename).then((value) => mergeHeadContent = value),
       fs.read(_mergeModeFilename).then((value) => mergeModeContent = value),
       fs.read(_mergeMsgFilename).then((value) => mergeModeContent = value)
     ]);
-    _verbose('Done backing up merge state!');
   }
 
   ///
   /// Restore meta information about ongoing git merge
   ///
   Future<void> restoreMergeStatus() async {
-    _verbose('Restoring merge state...');
     try {
       await Future.wait([
         if (mergeHeadContent != null)
@@ -123,12 +119,12 @@ class Workflow {
         if (mergeMsgContent != null)
           fs.write(_mergeMsgFilename, mergeMsgContent!),
       ]);
-      _verbose('Done restoring merge state!');
     } catch (error, stack) {
-      _verbose('Failed restoring merge state with error:');
       _verbose(error.toString());
       _verbose(stack.toString());
-      handleError(kRestoreMergeStatusError);
+      handleError(
+          Exception('Merge state could not be restored due to an error!'),
+          kRestoreMergeStatusError);
     }
   }
 
@@ -137,7 +133,6 @@ class Workflow {
   ///
   Future<void> prepare() async {
     try {
-      _verbose('Backing up original state...');
       _partiallyStagedFiles = await git.partiallyStagedFiles;
       if (_partiallyStagedFiles.isNotEmpty) {
         ctx.hasPartiallyStagedFiles = true;
@@ -170,19 +165,15 @@ class Workflow {
       /// Save stash of all staged files.
       /// and `stash store` saves it as an actual stash.
       final stash = await git.createStash();
-      _nothingToStash = stash.isEmpty;
 
       /// Whether there's nothing to stash.
-      if (_nothingToStash) {
-        _verbose('Nothing to stash.');
-      } else {
+      if (stash.isNotEmpty) {
         await git.storeStash(stash, message: _kStashMessage);
       }
-      _verbose('Done backing up original state!');
     } catch (error, stack) {
       _verbose(error.toString());
       _verbose(stack.toString());
-      handleError();
+      handleError(error);
     }
   }
 
@@ -201,7 +192,7 @@ class Workflow {
       ///`git checkout --force` doesn't throw errors, so it shouldn't be possible to get here.
       // If this does fail, the handleError method will set ctx.gitError and lint_staged will fail.
       ///
-      handleError(kHideUnstagedChangesError);
+      handleError(error, kHideUnstagedChangesError);
     }
   }
 
@@ -210,8 +201,6 @@ class Workflow {
   /// In case of a merge-conflict retry with 3-way merge.
   ///
   Future<void> applyModifications() async {
-    _verbose('Adding task modifications to index...');
-
     /// `matchedFileChunks` includes staged files that lint_staged originally detected and matched against a task.
     /// Add only these files so any 3rd-party edits to other files won't be included in the commit.
     /// These additions per chunk are run "serially" to prevent race conditions.
@@ -219,11 +208,10 @@ class Workflow {
     for (var files in matchedFileChunks) {
       await git.run(['add', '--', ...files]);
     }
-    _verbose('Done adding task modifications to index!');
-
     final stagedFilesAfterAdd = await git.stagedFiles;
     if (stagedFilesAfterAdd.isEmpty && !allowEmpty) {
-      handleError(kApplyEmptyCommitError);
+      handleError(
+          Exception('Prevented an empty git commit!'), kApplyEmptyCommitError);
     }
   }
 
@@ -233,7 +221,6 @@ class Workflow {
   /// 3-way merge usually fixes this, and in case it doesn't we should just give up and throw.
   ///
   Future<void> resotreUnstagedChanges() async {
-    _verbose('Restoring unstaged changes...');
     try {
       await git.run(['apply', ..._kGitApplyArgs, _unstagedFilename]);
     } catch (_) {
@@ -247,7 +234,7 @@ class Workflow {
         _verbose('Error while restoring unstaged changes using 3-way merge:');
         _verbose(error.toString());
         _verbose(stack.toString());
-        handleError(kRestoreUnstagedChangesError);
+        handleError(error, kRestoreUnstagedChangesError);
       }
     }
   }
@@ -257,7 +244,6 @@ class Workflow {
   ///
   Future<void> restoreOriginState() async {
     try {
-      _verbose('Restoring original state...');
       await git.run(['reset', '--hard', 'HEAD']);
       final backupStash = await getBackupStash();
       await git.run(['stash', 'apply', '--quiet', '--index', backupStash]);
@@ -270,12 +256,10 @@ class Workflow {
 
       // Clean out patch
       await fs.remove(_unstagedFilename);
-
-      _verbose('Done restoring original state!');
     } catch (error, stack) {
       _verbose(error.toString());
       _verbose(stack.toString());
-      handleError(kRestoreOriginalStateError);
+      handleError(error, kRestoreOriginalStateError);
     }
   }
 
@@ -283,25 +267,20 @@ class Workflow {
   /// Drop the created stashes after everything has run
   ///
   Future<void> cleanup() async {
-    if (_nothingToStash) {
-      _verbose('Nothing has been stashed');
-      return;
-    }
     try {
-      _verbose('Dropping backup stash...');
       await git.run(['stash', 'drop', '--quiet', await getBackupStash()]);
-      _verbose('Done dropping backup stash!');
     } catch (error, stack) {
       _verbose(error.toString());
       _verbose(stack.toString());
-      handleError();
+      handleError(error);
     }
   }
 
-  void handleError([Symbol? symbol]) {
+  void handleError(dynamic error, [Symbol? symbol]) {
     ctx.errors.add(kGitError);
     if (symbol != null) {
       ctx.errors.add(symbol);
     }
+    // throw error;
   }
 }

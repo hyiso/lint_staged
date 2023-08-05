@@ -15,11 +15,11 @@ void main() {
 
       await project.fs.write('pubspec.yaml', kConfigFormatFix);
 
-      // Create and commit a pretty file without running lint_staged
+      // Create and commit a formatted file without running lint_staged
       // This way the file will be available for the next step
       await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', '.']);
-      await project.git.run(['commit', '-m committed pretty file']);
+      await project.git.run(['commit', '-m committed formatted file']);
 
       // Edit file to be ugly
       await project.fs.remove('lib/main.dart');
@@ -27,14 +27,14 @@ void main() {
       await project.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file
-      // Since prettier reverts all changes, the commit should fail
+      // Since formatter reverts all changes, the commit should fail
       await expectLater(project.gitCommit(), throwsException);
 
       // Something was wrong so the repo is returned to original state
       expect(await project.git.stdout(['rev-list', '--count', 'HEAD']),
           equals('2'));
       expect(await project.git.stdout(['log', '-1', '--pretty=%B']),
-          contains('committed pretty file'));
+          contains('committed formatted file'));
       expect(await project.fs.read('lib/main.dart'), equals(kUnFormattedDart));
     });
 
@@ -47,11 +47,11 @@ void main() {
 
       await project.fs.write('pubspec.yaml', kConfigFormatFix);
 
-      // Create and commit a pretty file without running lint_staged
+      // Create and commit a formatted file without running lint_staged
       // This way the file will be available for the next step
       await project.fs.write('lib/main.dart', kFormattedDart);
       await project.git.run(['add', '.']);
-      await project.git.run(['commit', '-m committed pretty file']);
+      await project.git.run(['commit', '-m committed formatted file']);
 
       // Edit file to be unformatted
       await project.fs.remove('lib/main.dart');
