@@ -53,15 +53,14 @@ Future<bool> lintStaged({
         }
       }
       _printTaskOutput(e.ctx);
-      return false;
     }
-    rethrow;
+    return false;
   }
 }
 
 void _printTaskOutput(LintStagedContext ctx) {
   if (ctx.output.isEmpty) return;
-  final log = ctx.errors.isNotEmpty ? stdout.failed : stdout.success;
+  final log = ctx.errors.isNotEmpty ? stderr.failed : stdout.success;
   for (var line in ctx.output) {
     log(line);
   }

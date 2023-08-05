@@ -1,5 +1,3 @@
-import 'package:lint_staged/src/file.dart';
-import 'package:lint_staged/src/git.dart';
 import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
 
@@ -11,34 +9,29 @@ void main() {
   group('lint_staged', () {
     test('handles git worktrees', () async {
       final project = IntegrationProject();
-      print('dir: ${project.dir}');
+      print('dir: ${project.path}');
       await project.setup();
 
       // create a new branch and add it as worktree
-      final workTreeDir = join(project.dir, 'worktree');
-      await project.execGit(['branch', 'test']);
-      await project.execGit(['worktree', 'add', workTreeDir, 'test']);
+      final worktreeProject =
+          IntegrationProject(join(project.path, 'worktree'));
+      await project.git.run(['branch', 'test']);
+      await project.git.run(['worktree', 'add', worktreeProject.path, 'test']);
 
       // Stage pretty file
-      await writeFile('pubspec.yaml', kConfigFormatExit,
-          workingDirectory: workTreeDir);
-      await appendFile('lib/main.dart', kFormattedDart,
-          workingDirectory: workTreeDir);
-      await execGit(['add', 'lib/main.dart'], workingDirectory: workTreeDir);
+      await worktreeProject.fs.writeFile('pubspec.yaml', kConfigFormatExit);
+      await worktreeProject.fs.appendFile('lib/main.dart', kFormattedDart);
+      await worktreeProject.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
-      await project.gitCommit(workingDirectory: workTreeDir);
+      await worktreeProject.gitCommit();
 
       // Nothing is wrong, so a new commit is created
-      expect(
-          await execGit(['rev-list', '--count', 'HEAD'],
-              workingDirectory: workTreeDir),
+      expect(await worktreeProject.git.stdout(['rev-list', '--count', 'HEAD']),
           equals('2'));
-      expect(
-          await execGit(['log', '-1', '--pretty=%B'],
-              workingDirectory: workTreeDir),
+      expect(await worktreeProject.git.stdout(['log', '-1', '--pretty=%B']),
           contains('test'));
-      expect(await readFile('lib/main.dart', workingDirectory: workTreeDir),
+      expect(await worktreeProject.fs.readFile('lib/main.dart'),
           equals(kFormattedDart));
     });
   });

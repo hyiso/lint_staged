@@ -7,17 +7,21 @@ import 'package:verbose/verbose.dart';
 
 class _Figures {
   static const success = '✔';
-  static const error = '✖';
+  static const error = '✗';
   static const skipped = '↓';
 }
 
 extension IOSink on io.IOSink {
   void failed(String message) {
-    writeln(ansi.red('${_Figures.error} $message'));
+    writeln('${ansi.red(_Figures.error)} $message');
   }
 
   void skipped(String message) {
     writeln('${ansi.grey(_Figures.skipped)} $message');
+  }
+
+  void warn(String message) {
+    writeln(ansi.yellow(message));
   }
 
   void success(String message) {
@@ -28,47 +32,49 @@ extension IOSink on io.IOSink {
 class Spinner {
   final Stopwatch _stopwatch;
   late Timer _timer;
-  late _SpinnerFrame _spinner;
+  _SpinnerFrame? _frame;
   late int _lineCount;
 
-  Spinner() : _stopwatch = Stopwatch() {
-    _spinner = _SpinnerFrame();
-  }
+  Spinner() : _stopwatch = Stopwatch();
 
   Duration get elapsed => _stopwatch.elapsed;
 
   void progress(String message) {
-    message = '${ansi.yellow(_spinner.take())} $message';
     _lineCount = message.split('\n').length;
-    _start(message);
+    _frame = _SpinnerFrame(message);
+    _start();
   }
 
   void failed(String message) {
-    _stop('${ansi.red(_Figures.error)} $message');
+    _stop();
+    io.stdout.writeln('${ansi.red(_Figures.error)} $message');
   }
 
   void success(String message) {
-    _stop('${ansi.green(_Figures.success)} $message');
+    _stop();
+    io.stdout.writeln('${ansi.green(_Figures.success)} $message');
   }
 
   void skipped(String message) {
-    _stop('${ansi.grey(_Figures.skipped)} $message');
+    _stop();
+    io.stdout.writeln('${ansi.grey(_Figures.skipped)} $message');
   }
 
-  void _start(String message) {
-    io.stdout.write(message);
+  void _start() {
+    io.stdout.write(_frame);
     _stopwatch.reset();
     _stopwatch.start();
     if (Verbose.enabled) {
+      io.stdout.write('\n');
       return;
     }
     _timer = Timer.periodic(const Duration(milliseconds: 80), (t) {
-      io.stdout.write('${ansiEscapes.eraseLines(_lineCount)}$message');
+      io.stdout.write('${ansiEscapes.eraseLines(_lineCount)}$_frame');
     });
   }
 
-  void _stop(String message) {
-    io.stdout.writeln('${ansiEscapes.eraseLines(_lineCount)}$message');
+  void _stop() {
+    io.stdout.write(ansiEscapes.eraseLines(_lineCount));
     _stopwatch.stop();
     if (Verbose.enabled) {
       return;
@@ -82,6 +88,10 @@ const _kFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇",
 
 class _SpinnerFrame {
   int _index = 0;
+  final String message;
 
-  String take() => _kFrames[_index++ % _kFrames.length];
+  _SpinnerFrame(this.message);
+
+  @override
+  String toString() => '${_kFrames[_index++ % _kFrames.length]} $message';
 }

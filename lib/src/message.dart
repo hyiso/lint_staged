@@ -13,9 +13,12 @@ const kGetStagedFilesErrorMsg = 'Failed to get staged files!';
 
 const kNoStagedFilesMsg = 'No staged files';
 
+const kNoStagedFilesMatchedMsg = 'No staged files matched';
+
 const kGitErrorMsg = 'lint_staged failed due to a git error.';
 
-const kNoConfigurationMsg = 'No valid configuration found.';
+const kNoConfigurationMsg =
+    'No `lint_staged` configuration found in pubspec.yaml.';
 
 const kPreventedEmptyCommitMsg = '''lint_staged prevented an empty git commit.
   Use the --allow-empty option to continue, or check your task configuration''';
