@@ -1,3 +1,11 @@
+## 0.4.0
+
+> Note: This release has breaking changes.
+
+ - **BREAKING** **CHORE**: Change minSdk to `2.18.0`
+ - **BREAKING** **REFACTOR**: Refactor `git` and `workflow`.
+ - **FEAT**: Simplify step message.
+
 ## 0.3.0
 
 > Note: This release has breaking changes.
