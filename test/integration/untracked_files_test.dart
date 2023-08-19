@@ -49,7 +49,7 @@ void main() {
       await project.fs.write('binary', 'Hello, World!');
 
       // Run lint_staged with `dart format --set-exit-if-changed` and commit formatted file
-      expectLater(project.gitCommit(), throwsException);
+      expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Something was wrong so the repo is returned to original state
       expect(await project.git.commitCount, equals(1));

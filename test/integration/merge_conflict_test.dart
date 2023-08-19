@@ -112,7 +112,7 @@ void main() {
 
       // Merge second branch, causing merge conflict
       await expectLater(
-          project.git.run(['merge', 'branch-b']), throwsException);
+          project.git.run(['merge', 'branch-b']), throwsProcessException);
 
       expect(
           await project.fs.read('lib/main.dart'),
@@ -130,7 +130,7 @@ void main() {
 
       await project.fs.write('pubspec.yaml', kConfigFormatExit);
 
-      await expectLater(project.gitCommit(), throwsException);
+      await expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Something went wrong, so lintStaged failed and merge is still going
       expect(await project.git.commitCount, equals(2));

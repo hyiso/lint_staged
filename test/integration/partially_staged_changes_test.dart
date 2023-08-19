@@ -6,7 +6,9 @@ import 'utils.dart';
 
 void main() {
   group('lint_staged', () {
-    test('ignores untracked files', () async {
+    test(
+        'commits partial change from partially staged file when no errors from linter',
+        () async {
       final project = IntegrationProject();
       print('dir: ${project.path}');
       await project.setup();
@@ -96,7 +98,7 @@ void main() {
       final status = await project.git.status();
 
       // Run lint_staged with `dart format --set-exit-if-changed` to break the linter
-      await expectLater(project.gitCommit(), throwsException);
+      await expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Something was wrong so the repo is returned to original state
       expect(await project.git.commitCount, equals(1));
@@ -123,7 +125,7 @@ void main() {
       await project.fs.append('lib/main.dart', appended);
       final status = await project.git.status();
 
-      await expectLater(project.gitCommit(), throwsException);
+      await expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Something was wrong so the repo is returned to original state
       expect(await project.git.commitCount, equals(1));

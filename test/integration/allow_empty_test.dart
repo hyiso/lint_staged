@@ -28,7 +28,7 @@ void main() {
 
       // Run lint_staged to automatically format the file
       // Since formatter reverts all changes, the commit should fail
-      await expectLater(project.gitCommit(), throwsException);
+      await expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Something was wrong so the repo is returned to original state
       expect(await project.git.commitCount, equals(2));

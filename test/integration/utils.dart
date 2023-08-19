@@ -3,6 +3,7 @@ import 'package:lint_staged/lint_staged.dart';
 import 'package:lint_staged/src/fs.dart';
 import 'package:lint_staged/src/git.dart';
 import 'package:path/path.dart';
+import 'package:test/test.dart';
 
 String _temp() => join(Directory.systemTemp.path, 'tmp',
     'husky_test_${DateTime.now().microsecondsSinceEpoch}');
@@ -48,9 +49,14 @@ class IntegrationProject {
         allowEmpty: allowEmpty,
         workingDirectory: path);
     if (!passed) {
-      throw Exception('lint_staged not passed!');
+      throw IntegrationTestError();
     }
     final commitArgs = gitCommitArgs ?? ['-m test'];
     await git.run(['commit', ...commitArgs]);
   }
 }
+
+class IntegrationTestError {}
+
+final Matcher throwsIntegrationTestError = throwsA(isA<IntegrationTestError>());
+final Matcher throwsProcessException = throwsA(isA<ProcessException>());

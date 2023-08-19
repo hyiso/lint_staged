@@ -24,4 +24,4 @@ dev_dependencies:
   test: ^1.16.0
 
 lint_staged:
-  '**.dart': dart fix --apply && dart format --fix
+  '*/**.dart': dart fix --apply && dart format --fix

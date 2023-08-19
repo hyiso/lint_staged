@@ -65,7 +65,7 @@ void main() {
       final status = await project.git.status();
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await expectLater(project.gitCommit(), throwsException);
+      await expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(1));
@@ -89,7 +89,7 @@ void main() {
       final status = await project.git.status();
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await expectLater(project.gitCommit(), throwsException);
+      await expectLater(project.gitCommit(), throwsIntegrationTestError);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(1));
@@ -174,7 +174,7 @@ void main() {
 
       // Run lint_staged to automatically format the file and commit formatted files
       // Set maxArgLength low enough so that chunking is used
-      expect(project.gitCommit(maxArgLength: 10), throwsException);
+      expect(project.gitCommit(maxArgLength: 10), throwsIntegrationTestError);
     });
 
     test('works when a branch named stash exists', () async {
