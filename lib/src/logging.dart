@@ -15,23 +15,23 @@ class _Figures {
 
 extension IOSink on io.IOSink {
   void failed(String message) {
-    writeln('${ansi.red(_Figures.error)} $message');
+    writeln('${red(_Figures.error)} $message');
   }
 
   void skipped(String message) {
-    writeln('${ansi.grey(_Figures.skipped)} $message');
+    writeln('${grey(_Figures.skipped)} $message');
   }
 
   void warn(String message) {
-    writeln(ansi.yellow('${_Figures.warn} $message'));
+    writeln(yellow('${_Figures.warn} $message'));
   }
 
   void error(String message) {
-    writeln(ansi.red(message));
+    writeln(red(message));
   }
 
   void success(String message) {
-    writeln('${ansi.green(_Figures.success)} $message');
+    writeln('${green(_Figures.success)} $message');
   }
 }
 
@@ -55,18 +55,18 @@ class Spinner {
 
   void failed(String message) {
     _stop();
-    io.stdout.writeln('${ansi.red(_Figures.error)} $message');
+    io.stdout.writeln('${red(_Figures.error)} $message');
   }
 
   void success(String message) {
     _stop();
     io.stdout.writeln(
-        '${ansi.green(_Figures.success)} ${message.padRight(40)}${elapsed.inMilliseconds}ms');
+        '${green(_Figures.success)} ${message.padRight(40)}${elapsed.inMilliseconds}ms');
   }
 
   void skipped(String message) {
     _stop();
-    io.stdout.writeln('${ansi.grey(_Figures.skipped)} $message');
+    io.stdout.writeln('${grey(_Figures.skipped)} $message');
   }
 
   void _start() {

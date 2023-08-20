@@ -96,7 +96,7 @@ Future<Context> runAll({
             workingDirectory: workingDirectory);
         final messsages = ['$script $file'];
         if (result.stderr.toString().trim().isNotEmpty) {
-          messsages.add(ansi.red(result.stderr.toString().trim()));
+          messsages.add(red(result.stderr.toString().trim()));
         }
         if (result.stdout.toString().trim().isNotEmpty) {
           messsages.add(result.stdout.toString().trim());

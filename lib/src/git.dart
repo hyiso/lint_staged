@@ -45,10 +45,10 @@ class Git {
         workingDirectory: workingDirectory);
     final messsages = ['git ${args.join(' ')}'];
     if (result.stderr.toString().trim().isNotEmpty) {
-      messsages.add(ansi.grey(result.stderr.toString().trim()));
+      messsages.add(grey(result.stderr.toString().trim()));
     }
     if (result.stdout.toString().trim().isNotEmpty) {
-      messsages.add(ansi.grey(result.stdout.toString().trim()));
+      messsages.add(grey(result.stdout.toString().trim()));
     }
     _verbose(messsages.join('\n'));
     if (result.exitCode != 0) {
