@@ -1,3 +1,7 @@
+## 0.4.1
+
+ - Bump `ansi` to `0.3.0`
+
 ## 0.4.0
 
 > Note: This release has breaking changes.
