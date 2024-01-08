@@ -2,7 +2,6 @@ import 'dart:io' show Process, ProcessException, ProcessResult;
 import 'dart:math';
 
 import 'package:ansi/ansi.dart';
-import 'package:path/path.dart';
 import 'package:verbose/verbose.dart';
 
 final _verbose = Verbose('lit_staged:git');
