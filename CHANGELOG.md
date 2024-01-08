@@ -1,3 +1,7 @@
+## 0.4.3
+
+ - **Fix**: path is incorrectly parsed on Windows.(fix #10)
+
 ## 0.4.2
 
  - Bump `ansi` to `0.4.0`
