@@ -2,7 +2,6 @@ import 'dart:io' show Process, ProcessException, ProcessResult;
 import 'dart:math';
 
 import 'package:ansi/ansi.dart';
-import 'package:path/path.dart';
 import 'package:verbose/verbose.dart';
 
 final _verbose = Verbose('lit_staged:git');
@@ -70,7 +69,7 @@ class Git {
   Future<List<String>> get stagedFiles async {
     final args = getDiffArgs(diff: _diff, diffFilter: diffFilter);
     final output = await _stdout(args);
-    final files = parseGitZOutput(output).map((e) => normalize(e)).toList();
+    final files = parseGitZOutput(output).toList();
     _verbose('Staged files: $files');
     return files;
   }
