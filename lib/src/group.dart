@@ -37,6 +37,7 @@ Map<String, Group> groupFilesByConfig(
 
     // Remove excluded files from each group
     for (var group in groups.values) {
+      _verbose('$glob excluded files: $excludedFiles');
       group.files.removeWhere((file) => excludedFiles.contains(file));
     }
   }
