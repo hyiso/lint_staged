@@ -1,3 +1,7 @@
+## 0.5.0
+
+ - **FEAT**: Support exclude pattern - by @bawahakim
+
 ## 0.4.3
 
  - **Fix**: path is incorrectly parsed on Windows.(fix #10)
