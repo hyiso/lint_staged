@@ -17,6 +17,7 @@ class IntegrationProject {
   Future<void> setup({bool initialCommit = true}) async {
     /// Git init
     await Process.run('git', ['init', path]);
+    await fs.write('.gitattributes', '*.dart text eol=lf');
 
     /// Git config
     await config();
@@ -35,7 +36,7 @@ class IntegrationProject {
 
   Future<void> _initialCommit() async {
     await fs.append('README.md', '# Test\n');
-    await git.run(['add', 'README.md']);
+    await git.run(['add', 'README.md', '.gitattributes']);
     await git.run(['commit', '-m initial commit']);
   }
 

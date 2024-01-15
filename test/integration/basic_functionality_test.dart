@@ -198,5 +198,29 @@ void main() {
       expect(await project.git.lastCommit, contains('test'));
       expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
     });
+
+    test('ignores files given in pubspec.yaml', () async {
+      final project = IntegrationProject();
+      print('dir: ${project.path}');
+      await project.setup();
+
+      await project.fs.write('pubspec.yaml', kConfigFormatFixWithIgnore);
+
+      // Stage multi unformatted files
+      await project.fs.write('lib/main.dart', kUnFormattedDart);
+      await project.git.run(['add', 'lib/main.dart']);
+
+      await project.fs.write('lib/foo.g.dart', kUnFormattedDart);
+      await project.git.run(['add', 'lib/foo.g.dart']);
+
+      // Run lint_staged to automatically format the file and commit formatted files
+      await project.gitCommit();
+
+      // main.dart should be formatted, while foo.g.dart should not
+      expect(await project.git.commitCount, equals(2));
+      expect(await project.git.lastCommit, contains('test'));
+      expect(await project.fs.read('lib/main.dart'), equals(kFormattedDart));
+      expect(await project.fs.read('lib/foo.g.dart'), equals(kUnFormattedDart));
+    });
   });
 }

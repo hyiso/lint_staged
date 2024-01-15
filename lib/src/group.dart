@@ -14,23 +14,33 @@ Map<String, Group> groupFilesByConfig(
     {required Map<String, List<String>> config, required List<String> files}) {
   final fileSet = files.toSet();
   final groups = <String, Group>{};
-  for (var entry in config.entries) {
-    final glob = Glob(entry.key);
-    final files = <String>[];
-    for (var file in fileSet) {
-      if (glob.matches(file)) {
-        files.add(file);
-      }
-    }
 
-    /// Files should only match a single entry
-    for (var file in files) {
-      fileSet.remove(file);
-    }
-    if (files.isNotEmpty) {
-      _verbose('$glob matched files: $files');
-      groups[entry.key] = Group(scripts: entry.value, files: files);
+  // Separate config into inclusion and exclusion patterns
+  final includeConfig = config.entries.where((e) => !e.key.startsWith('!'));
+  final excludeConfig = config.entries.where((e) => e.key.startsWith('!'));
+
+  // First, include files based on inclusion patterns
+  for (var entry in includeConfig) {
+    final glob = Glob(entry.key);
+    final matchedFiles = fileSet.where((file) => glob.matches(file)).toList();
+
+    if (matchedFiles.isNotEmpty) {
+      _verbose('$glob matched files: $matchedFiles');
+      groups[entry.key] = Group(scripts: entry.value, files: matchedFiles);
     }
   }
+
+  // Next, exclude files based on exclusion patterns
+  for (var entry in excludeConfig) {
+    final glob = Glob(entry.key.substring(1)); // Remove the '!' prefix
+    final excludedFiles = fileSet.where((file) => glob.matches(file)).toSet();
+
+    // Remove excluded files from each group
+    for (var group in groups.values) {
+      _verbose('$glob excluded files: $excludedFiles');
+      group.files.removeWhere((file) => excludedFiles.contains(file));
+    }
+  }
+
   return groups;
 }

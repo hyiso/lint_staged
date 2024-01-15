@@ -152,6 +152,19 @@ Parentheses are reserved in case this package adds support for Bash extended
 globbing in the future. For the time being, using them will throw an error
 unless they're escaped.
 
+### Exclude pattern: `!`
+
+For any files you wish to exclude, use the same glob pattern but prepend it with `!`
+
+```
+lint_staged:
+  'lib/**.dart': your-cmd
+  '!lib/**.g.dart': your-cmd
+```
+
+This would include all .dart files, but exclude .g.dart files.
+
+
 ## What commands are supported?
 
 Supported are any executables installed locally or globally via `pub` as well as any executable from your \$PATH.
