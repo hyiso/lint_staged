@@ -4,7 +4,7 @@ const kConfigFormatFix = '''lint_staged:
 
 const kConfigFormatFixWithIgnore = '''lint_staged:
   'lib/**.dart': dart format --fix
-  '!lib/*.g.dart': dart format --fix
+  '!lib/**.g.dart': dart format --fix
 ''';
 
 const kConfigFormatExit = '''lint_staged:
