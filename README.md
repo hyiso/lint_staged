@@ -14,7 +14,6 @@ Inspired by Javascript [lint-staged](https://github.com/okonet/lint-staged)
 Linting makes more sense when run before committing your code. By doing so you can ensure no errors go into the repository and enforce code style. But running a lint process on a whole project is slow, and linting results can be irrelevant. Ultimately you only want to lint files that will be committed.
 
 This project contains a script that will run arbitrary shell tasks with a list of staged files as an argument, filtered by a specified glob pattern.
-> If you've written one, please submit a PR with the link to it!
 
 ## Installation and setup
 
@@ -310,6 +309,37 @@ You can then run lint_staged against the same files with:
 
 ```
 dart run lint_staged --diff="master...my-branch"
+```
+
+</details>
+
+### The output of commit hook looks weird (no colors, duplicate lines, verbose output on Windows, …)
+
+<details>
+  <summary>Click to expand</summary>
+
+Git 2.36.0 introduced a change to hooks where they were no longer run in the original TTY.
+This was fixed in 2.37.0:
+
+https://raw.githubusercontent.com/git/git/master/Documentation/RelNotes/2.37.0.txt
+
+> - In Git 2.36 we revamped the way how hooks are invoked. One change
+>   that is end-user visible is that the output of a hook is no longer
+>   directly connected to the standard output of "git" that spawns the
+>   hook, which was noticed post release. This is getting corrected.
+>   (merge [a082345372](https://github.com/git/git/commit/a082345372) ab/hooks-regression-fix later to maint).
+
+If updating Git doesn't help, you can try to manually redirect the output in your Git hook; for example:
+
+```shell
+# .husky/pre-commit
+
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+if sh -c ": >/dev/tty" >/dev/null 2>/dev/null; then exec >/dev/tty 2>&1; fi
+
+dart run lint_staged
 ```
 
 </details>

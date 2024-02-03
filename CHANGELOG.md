@@ -1,3 +1,7 @@
+## 0.5.1
+
+ - **DOCS**: Add doc about verbose output on Windows in README.md
+
 ## 0.5.0
 
  - **FEAT**: Support exclude pattern - by @bawahakim
