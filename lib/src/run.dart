@@ -86,20 +86,15 @@ Future<Context> runAll({
   } else {
     spinner.skipped('Hide unstaged changes');
   }
-  spinner.progress('Run tasks for staged files...\n');
+  spinner.progress('Run tasks for staged files...');
   await Future.wait(groups.values.map((group) async {
     await Future.wait(group.scripts.map((script) async {
       final args = script.split(' ');
       final exe = args.removeAt(0);
       await Future.wait(group.files.map((file) async {
-        print('-------');
-        print(exe);
-        print(args);
-        print(file);
         final result = await Process.run(exe, [...args, file],
             workingDirectory: workingDirectory);
         final messsages = ['$script $file'];
-        print('==========> ${result.pid}, ${result.stdout}, ${result.stderr}');
         if (result.stderr.toString().trim().isNotEmpty) {
           messsages.add(red(result.stderr.toString().trim()));
         }
