@@ -55,6 +55,7 @@ Options:
                                      "--no-stash".
   --diff-filter [string]             override the default "--diff-filter=ACMR" flag of "git diff" to get list of files
   --no-stash                         disable the backup stash, and do not revert in case of errors
+  --processes [int]                  limit the maximum processes can run at the same time.
 ```
 
 - **`--allow-empty`**: By default, when linter tasks undo all staged changes, lint_staged will exit with an error and abort the commit. Use this flag to allow creating empty git commits.
