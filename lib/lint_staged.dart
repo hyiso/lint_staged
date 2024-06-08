@@ -25,13 +25,14 @@ Future<bool> lintStaged({
 }) async {
   try {
     final ctx = await runAll(
-        allowEmpty: allowEmpty,
-        diff: diff,
-        diffFilter: diffFilter,
-        stash: stash,
-        maxArgLength: maxArgLength,
-        workingDirectory: workingDirectory,
-        numOfProcesses: numOfProcesses);
+      allowEmpty: allowEmpty,
+      diff: diff,
+      diffFilter: diffFilter,
+      stash: stash,
+      maxArgLength: maxArgLength,
+      workingDirectory: workingDirectory,
+      numOfProcesses: numOfProcesses,
+    );
     _printTaskOutput(ctx);
     return true;
   } catch (e) {

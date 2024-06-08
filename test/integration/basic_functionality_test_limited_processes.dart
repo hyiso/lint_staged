@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import '__fixtures__/config.dart';
@@ -20,7 +22,7 @@ void main() {
       await project.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted file
-      await project.gitCommit();
+      await project.gitCommit(numOfProcesses: Platform.numberOfProcessors);
 
       // Nothing is wrong, so a new commit created
       expect(await project.git.commitCount, equals(2));
@@ -45,7 +47,7 @@ void main() {
       await project.git.run(['add', 'lib/foo.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await project.gitCommit();
+      await project.gitCommit(numOfProcesses: Platform.numberOfProcessors);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(2));
@@ -69,7 +71,7 @@ void main() {
       final status = await project.git.status();
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await expectLater(project.gitCommit(), throwsIntegrationTestError);
+      await expectLater(project.gitCommit(numOfProcesses: Platform.numberOfProcessors), throwsIntegrationTestError);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(1));
@@ -93,7 +95,7 @@ void main() {
       final status = await project.git.status();
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await expectLater(project.gitCommit(), throwsIntegrationTestError);
+      await expectLater(project.gitCommit(numOfProcesses: Platform.numberOfProcessors), throwsIntegrationTestError);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(1));
@@ -123,7 +125,7 @@ void main() {
       await project.fs.append('lib/main.dart', kFormattedDart);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await project.gitCommit();
+      await project.gitCommit(numOfProcesses: Platform.numberOfProcessors);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(2));
@@ -157,7 +159,7 @@ void main() {
 
       // Run lint_staged to automatically format the file and commit formatted files
       // Set maxArgLength low enough so that chunking is used
-      await project.gitCommit(maxArgLength: 10);
+      await project.gitCommit(numOfProcesses: Platform.numberOfProcessorsmaxArgLength: 10);
 
       // Nothing was wrong so the empty commit is created
       expect(await project.git.commitCount, equals(2));
@@ -182,7 +184,7 @@ void main() {
 
       // Run lint_staged to automatically format the file and commit formatted files
       // Set maxArgLength low enough so that chunking is used
-      expect(project.gitCommit(maxArgLength: 10), throwsIntegrationTestError);
+      expect(project.gitCommit(numOfProcesses: Platform.numberOfProcessorsmaxArgLength: 10), throwsIntegrationTestError);
     });
 
     test(
@@ -201,7 +203,7 @@ void main() {
       await project.git.run(['add', 'lib/main.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted file
-      await project.gitCommit();
+      await project.gitCommit(numOfProcesses: Platform.numberOfProcessors);
 
       // Nothing is wrong, so a new commit is created and file is pretty
       expect(await project.git.commitCount, equals(2));
@@ -225,7 +227,7 @@ void main() {
       await project.git.run(['add', 'lib/foo.g.dart']);
 
       // Run lint_staged to automatically format the file and commit formatted files
-      await project.gitCommit();
+      await project.gitCommit(numOfProcesses: Platform.numberOfProcessors);
 
       // main.dart should be formatted, while foo.g.dart should not
       expect(await project.git.commitCount, equals(2));
