@@ -60,6 +60,8 @@ class ProcessesPool {
   final OnCompleted? onCompleted;
   bool isStarted = false;
 
+  int get tasksNumber => _tasks.length;
+
   ProcessesPool({
     this.size,
     this.onCompleted,
@@ -97,7 +99,7 @@ class ProcessesPool {
     }
     _processes.addAll(List.filled(size!, null));
     await Future.wait(List.generate(size!, (int index) async {
-      return runTaskSync(
+      return _runTaskSync(
         index: index,
         onCompleted: onCompleted ?? this.onCompleted,
       );
@@ -105,7 +107,7 @@ class ProcessesPool {
     isStarted = false;
   }
 
-  Future<ProcessResult?> runTaskSync({
+  Future<ProcessResult?> _runTaskSync({
     required int index,
     OnCompleted? onCompleted,
   }) async {
@@ -118,7 +120,7 @@ class ProcessesPool {
     _processes[index] = null;
     onCompleted?.call(result);
 
-    return runTaskSync(
+    return _runTaskSync(
       index: index,
       onCompleted: onCompleted,
     );
