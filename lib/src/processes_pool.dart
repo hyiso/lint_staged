@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 typedef OnCompleted = void Function(ProcessResult result);
@@ -43,58 +44,84 @@ class ProcessTask {
   }
 }
 
+class ProcessEntity {
+  final ProcessTask task;
+  final Future<ProcessResult> process;
+  const ProcessEntity({
+    required this.task,
+    required this.process,
+  });
+}
+
 class ProcessesPool {
   final int? size;
   final Queue<ProcessTask> _tasks = Queue();
-  final Map<ProcessTask, Future<ProcessResult>> _processes = {};
+  final List<ProcessEntity?> _processes = [];
   final OnCompleted? onCompleted;
+  bool isStarted = false;
 
   ProcessesPool({
-    required this.size,
+    this.size,
     this.onCompleted,
   });
 
-  Future<void> init({
+  void addAll({
     List<ProcessTask> tasks = const [],
     OnCompleted? onCompleted,
   }) async {
     _tasks.addAll(tasks);
   }
 
+  void addTask(
+    ProcessTask task, {
+    OnCompleted? onCompleted,
+  }) {
+    _tasks.add(task);
+  }
+
   Future<void> start({
     OnCompleted? onCompleted,
   }) async {
+    if (isStarted) {
+      throw Exception('You have already started');
+    }
+    isStarted = true;
     if (size == null) {
-      Future.wait(_tasks.map((task) async {
-        await task.run();
+      await Future.wait(_tasks.map((task) async {
+        ProcessResult result = await task.run();
+        onCompleted?.call(result);
         _tasks.remove(task);
       }).toList());
+      isStarted = false;
       return;
     }
-    await Future.wait(List.generate(size!, (int index) {
-      return runTask(onCompleted: onCompleted ?? this.onCompleted);
+    _processes.addAll(List.filled(size!, null));
+    await Future.wait(List.generate(size!, (int index) async {
+      return runTaskSync(
+        index: index,
+        onCompleted: onCompleted ?? this.onCompleted,
+      );
     }));
+    isStarted = false;
   }
 
-  void addTask(ProcessTask task) {
-    _tasks.add(task);
-    if (size == null) {
-      runTask(onCompleted: onCompleted);
-    }
-  }
-
-  Future<ProcessResult> runTask({
+  Future<ProcessResult?> runTaskSync({
+    required int index,
     OnCompleted? onCompleted,
-  }) {
+  }) async {
+    if (_tasks.isEmpty) return null;
     ProcessTask task = _tasks.removeFirst();
     Future<ProcessResult> process = task.run();
-    _processes[task] = process;
-    process.then((ProcessResult result) {
-      _processes.remove(task);
-      onCompleted?.call(result);
-      runTask(onCompleted: onCompleted);
-    });
-    return process;
+    ProcessEntity entity = ProcessEntity(process: process, task: task);
+    _processes[index] = entity;
+    ProcessResult result = await process;
+    _processes[index] = null;
+    onCompleted?.call(result);
+
+    return runTaskSync(
+      index: index,
+      onCompleted: onCompleted,
+    );
   }
 
   void close() {

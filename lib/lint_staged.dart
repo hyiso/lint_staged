@@ -21,6 +21,7 @@ Future<bool> lintStaged({
   bool stash = true,
   String? workingDirectory,
   int maxArgLength = 0,
+  int? numOfProcesses,
 }) async {
   try {
     final ctx = await runAll(
@@ -29,7 +30,8 @@ Future<bool> lintStaged({
         diffFilter: diffFilter,
         stash: stash,
         maxArgLength: maxArgLength,
-        workingDirectory: workingDirectory);
+        workingDirectory: workingDirectory,
+        numOfProcesses: numOfProcesses);
     _printTaskOutput(ctx);
     return true;
   } catch (e) {
