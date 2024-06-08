@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:io';
 
 typedef OnCompleted = void Function(ProcessResult result);
@@ -15,6 +14,7 @@ class ProcessTask {
   final bool runInShell;
   final Encoding? stdoutEncoding;
   final Encoding? stderrEncoding;
+  final OnCompleted? onCompleted;
 
   /// The copy of the parameter of Process.run()
   const ProcessTask(
@@ -26,6 +26,7 @@ class ProcessTask {
     this.runInShell = false,
     this.stdoutEncoding = systemEncoding,
     this.stderrEncoding = systemEncoding,
+    this.onCompleted,
   });
 
   Future<ProcessResult> run() async {
@@ -57,27 +58,21 @@ class ProcessesPool {
   final int? size;
   final Queue<ProcessTask> _tasks = Queue();
   final List<ProcessEntity?> _processes = [];
-  final OnCompleted? onCompleted;
   bool isStarted = false;
 
   int get tasksNumber => _tasks.length;
 
   ProcessesPool({
     this.size,
-    this.onCompleted,
   });
 
   void addAll({
     List<ProcessTask> tasks = const [],
-    OnCompleted? onCompleted,
   }) async {
     _tasks.addAll(tasks);
   }
 
-  void addTask(
-    ProcessTask task, {
-    OnCompleted? onCompleted,
-  }) {
+  void addTask(ProcessTask task) {
     _tasks.add(task);
   }
 
@@ -91,7 +86,7 @@ class ProcessesPool {
     if (size == null) {
       await Future.wait(_tasks.map((task) async {
         ProcessResult result = await task.run();
-        onCompleted?.call(result);
+        (onCompleted ?? task.onCompleted)?.call(result);
         _tasks.remove(task);
       }).toList());
       isStarted = false;
@@ -101,7 +96,7 @@ class ProcessesPool {
     await Future.wait(List.generate(size!, (int index) async {
       return _runTaskSync(
         index: index,
-        onCompleted: onCompleted ?? this.onCompleted,
+        onCompleted: onCompleted,
       );
     }));
     isStarted = false;
@@ -118,11 +113,11 @@ class ProcessesPool {
     _processes[index] = entity;
     ProcessResult result = await process;
     _processes[index] = null;
-    onCompleted?.call(result);
+    (onCompleted ?? task.onCompleted)?.call(result);
 
     return _runTaskSync(
       index: index,
-      onCompleted: onCompleted,
+      onCompleted: onCompleted ?? task.onCompleted,
     );
   }
 

@@ -96,22 +96,25 @@ Future<Context> runAll({
       final exe = args.removeAt(0);
       for (var file in group.files) {
         processesPool.addTask(
-          ProcessTask(exe, [...args, file], workingDirectory: workingDirectory),
-          onCompleted: (result) {
-            final messsages = ['$script $file'];
-            if (result.stderr.toString().trim().isNotEmpty) {
-              messsages.add(red(result.stderr.toString().trim()));
-            }
-            if (result.stdout.toString().trim().isNotEmpty) {
-              messsages.add(result.stdout.toString().trim());
-            }
-            _verbose(messsages.join('\n'));
-            if (result.exitCode != 0) {
-              ctx.output.add(messsages.join('\n'));
-              ctx.errors.add(kTaskError);
-            }
-            Process.killPid(result.pid);
-          },
+          ProcessTask(
+            exe,
+            [...args, file],
+            workingDirectory: workingDirectory,
+            onCompleted: (result) {
+              final messsages = ['$script $file'];
+              if (result.stderr.toString().trim().isNotEmpty) {
+                messsages.add(red(result.stderr.toString().trim()));
+              }
+              if (result.stdout.toString().trim().isNotEmpty) {
+                messsages.add(result.stdout.toString().trim());
+              }
+              _verbose(messsages.join('\n'));
+              if (result.exitCode != 0) {
+                ctx.output.add(messsages.join('\n'));
+                ctx.errors.add(kTaskError);
+              }
+            },
+          ),
         );
       }
     }
