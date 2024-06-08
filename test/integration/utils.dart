@@ -44,11 +44,14 @@ class IntegrationProject {
     bool allowEmpty = false,
     int maxArgLength = 0,
     List<String>? gitCommitArgs,
+    int? numOfProcesses,
   }) async {
     final passed = await lintStaged(
-        maxArgLength: maxArgLength,
-        allowEmpty: allowEmpty,
-        workingDirectory: path);
+      maxArgLength: maxArgLength,
+      allowEmpty: allowEmpty,
+      workingDirectory: path,
+      numOfProcesses: numOfProcesses,
+    );
     if (!passed) {
       throw IntegrationTestError();
     }
