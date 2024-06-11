@@ -16,19 +16,27 @@ void main(List<String> arguments) async {
     ..addFlag('stash',
         defaultsTo: true,
         negatable: true,
-        help: 'Enable the backup stash, and revert in case of errors');
+        help: 'Enable the backup stash, and revert in case of errors')
+    ..addOption('processes',
+        defaultsTo: null,
+        abbr: 'p',
+        help:
+            'The maximum processes can run at the same time, limits it can reduce the memory usage');
   final argResults = argParser.parse(arguments);
   final allowEmpty = argResults['allow-empty'] == true;
   final diff = argResults['diff'];
   final diffFilter = argResults['diff-filter'];
   final stash = argResults['stash'] == true;
+  final numberOfProcessors = argResults['processes'] != null
+      ? int.parse(argResults['processes'])
+      : null;
   final passed = await lintStaged(
-    allowEmpty: allowEmpty,
-    diff: diff,
-    diffFilter: diffFilter,
-    stash: stash,
-    maxArgLength: _maxArgLength ~/ 2,
-  );
+      allowEmpty: allowEmpty,
+      diff: diff,
+      diffFilter: diffFilter,
+      stash: stash,
+      maxArgLength: _maxArgLength ~/ 2,
+      numOfProcesses: numberOfProcessors);
   exit(passed ? 0 : 1);
 }
 

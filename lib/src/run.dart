@@ -8,6 +8,7 @@ import 'chunk.dart';
 import 'config.dart';
 import 'git.dart';
 import 'group.dart';
+import 'processes_pool.dart';
 import 'workflow.dart';
 import 'logging.dart';
 import 'message.dart';
@@ -23,6 +24,7 @@ Future<Context> runAll({
   bool stash = true,
   String? workingDirectory,
   int maxArgLength = 0,
+  int? numOfProcesses,
 }) async {
   final ctx = getInitialContext();
   final fs = FileSystem(workingDirectory);
@@ -87,28 +89,40 @@ Future<Context> runAll({
     spinner.skipped('Hide unstaged changes');
   }
   spinner.progress('Run tasks for staged files...');
-  await Future.wait(groups.values.map((group) async {
-    await Future.wait(group.scripts.map((script) async {
+  ProcessesPool processesPool = ProcessesPool(size: numOfProcesses);
+  for (var group in groups.values) {
+    for (var script in group.scripts) {
       final args = script.split(' ');
       final exe = args.removeAt(0);
-      await Future.wait(group.files.map((file) async {
-        final result = await Process.run(exe, [...args, file],
-            workingDirectory: workingDirectory);
-        final messsages = ['$script $file'];
-        if (result.stderr.toString().trim().isNotEmpty) {
-          messsages.add(red(result.stderr.toString().trim()));
-        }
-        if (result.stdout.toString().trim().isNotEmpty) {
-          messsages.add(result.stdout.toString().trim());
-        }
-        _verbose(messsages.join('\n'));
-        if (result.exitCode != 0) {
-          ctx.output.add(messsages.join('\n'));
-          ctx.errors.add(kTaskError);
-        }
-      }));
-    }));
-  }));
+      for (var file in group.files) {
+        processesPool.addTask(
+          ProcessTask(
+            exe,
+            [...args, file],
+            workingDirectory: workingDirectory,
+            onCompleted: (result) {
+              final messsages = ['$script $file'];
+              if (result.stderr.toString().trim().isNotEmpty) {
+                messsages.add(red(result.stderr.toString().trim()));
+              }
+              if (result.stdout.toString().trim().isNotEmpty) {
+                messsages.add(result.stdout.toString().trim());
+              }
+              _verbose(messsages.join('\n'));
+              if (result.exitCode != 0) {
+                ctx.output.add(messsages.join('\n'));
+                ctx.errors.add(kTaskError);
+              }
+            },
+          ),
+        );
+      }
+    }
+  }
+
+  await processesPool.start();
+  processesPool.close();
+
   spinner.success('Run tasks for staged files');
   if (!applyModifationsSkipped(ctx)) {
     spinner.progress('Apply modifications...');
